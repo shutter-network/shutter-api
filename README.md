@@ -36,7 +36,7 @@ This documentation will guide you through:
 
 ## Prerequisites
 
-- **API Access to the Shutter Centralized Service**:  
+- **API Access**:
   At the moment, the access is free of charge. You only need to query the API endpoints at the addresses below:
   - **Chiado**: `https://shutter-api.chiado.staging.shutter.network/api/[ADD_ENDPOINT]`
   - **Mainnet**: `https://shutter-api.staging.shutter.network/api/[ADD_ENDPOINT]`

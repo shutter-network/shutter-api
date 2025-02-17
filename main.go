@@ -13,8 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// @title			Shutter service API
-// @description	Shutter Service API is an encryption and decryption service that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
+// @title			Shutter API
+// @description	Shutter API is an encryption and decryption API that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
 func main() {
 	port := os.Getenv("SERVER_PORT")
 

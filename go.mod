@@ -1,4 +1,4 @@
-module github.com/shutter-network/shutter-service-api
+module github.com/shutter-network/shutter-api
 
 go 1.22.0
 

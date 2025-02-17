@@ -20,9 +20,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/internal/data"
-	httpError "github.com/shutter-network/shutter-service-api/internal/error"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
+	httpError "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 )
 

@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/shutter-network/shutter-service-api/common"
+	"github.com/shutter-network/shutter-api/common"
 	"github.com/stretchr/testify/mock"
 )
 

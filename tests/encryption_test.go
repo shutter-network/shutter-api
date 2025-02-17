@@ -9,7 +9,7 @@ import (
 	cryptorand "crypto/rand"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/shutter-network/shutter-service-api/common"
+	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 	blst "github.com/supranational/blst/bindings/go"
 	"gotest.tools/assert"

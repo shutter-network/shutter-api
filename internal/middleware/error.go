@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/shutter-network/shutter-service-api/internal/error"
+	"github.com/shutter-network/shutter-api/internal/error"
 
 	"github.com/gin-gonic/gin"
 )

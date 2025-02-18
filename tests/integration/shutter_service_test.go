@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -258,13 +260,18 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 	ctx := context.Background()
 	address := crypto.PubkeyToAddress(*s.config.PublicKey).Hex()
 
-	encryptedMessages := make([]*shcrypto.EncryptedMessage, 3)
-	identities := make([]string, 3)
+	totalBulkRequests, err := strconv.Atoi(os.Getenv("TOTAL_BULK_REQUESTS"))
+	if err != nil {
+		totalBulkRequests = 3
+	}
+
+	encryptedMessages := make([]*shcrypto.EncryptedMessage, totalBulkRequests)
+	identities := make([]string, totalBulkRequests)
 
 	block, err := s.ethClient.BlockByNumber(ctx, nil)
 	s.Require().NoError(err)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < totalBulkRequests; i++ {
 		identityPrefix, err := generateRandomBytes(32)
 		s.Require().NoError(err)
 		identityPrefixStringified := hex.EncodeToString(identityPrefix)
@@ -308,7 +315,7 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 
 	time.Sleep(40 * time.Second)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < totalBulkRequests; i++ {
 		decryptionKeyResponse := s.getDecryptionKeyRequest(identities[i], http.StatusOK)
 		decryptionKeyStringified := decryptionKeyResponse["message"].DecryptionKey
 		s.Require().NotEmpty(decryptionKeyStringified)

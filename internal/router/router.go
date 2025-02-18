@@ -4,10 +4,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/shutter-network/shutter-service-api/common"
-	docs "github.com/shutter-network/shutter-service-api/docs"
-	"github.com/shutter-network/shutter-service-api/internal/middleware"
-	"github.com/shutter-network/shutter-service-api/internal/service"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/docs"
+	"github.com/shutter-network/shutter-api/internal/middleware"
+	"github.com/shutter-network/shutter-api/internal/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -33,7 +33,7 @@ func NewRouter(
 		api.GET("/decrypt_commitment", cryptoService.DecryptCommitment)
 	}
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, func(c *ginSwagger.Config) {
-		c.Title = "Shutter-Service-API"
+		c.Title = "Shutter-API"
 	}))
 	return router
 }

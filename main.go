@@ -2,20 +2,19 @@ package main
 
 import (
 	"context"
+	shutterAPICommon "github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/common/database"
+	"github.com/shutter-network/shutter-api/internal/router"
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog/log"
-	shutterServiceCommon "github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/common/database"
-	_ "github.com/shutter-network/shutter-service-api/docs"
-	"github.com/shutter-network/shutter-service-api/internal/router"
 )
 
-// @title			Shutter service API
-// @description	Shutter Service API is an encryption and decryption service that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
+// @title			Shutter API
+// @description	Shutter API is an encryption and decryption API that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
 func main() {
 	port := os.Getenv("SERVER_PORT")
 
@@ -43,7 +42,7 @@ func main() {
 	keyperSetManagerContractAddressStringified := os.Getenv("KEYPER_SET_MANAGER_CONTRACT_ADDRESS")
 	keyperSetManagerContractAddress := common.HexToAddress(keyperSetManagerContractAddressStringified)
 
-	contract, err := shutterServiceCommon.NewContract(client, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
+	contract, err := shutterAPICommon.NewContract(client, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
 	if err != nil {
 		log.Err(err).Msg("failed to instantiate shutter contracts")
 		return
@@ -56,7 +55,7 @@ func main() {
 		log.Err(err).Msg("failed to parse signing key")
 	}
 
-	config, err := shutterServiceCommon.NewConfig(keyperHTTPUrl, signingKey)
+	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey)
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return

@@ -4,15 +4,18 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net/url"
+
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2p"
 )
 
 type Config struct {
 	KeyperHTTPURL *url.URL
 	SigningKey    *ecdsa.PrivateKey
 	PublicKey     *ecdsa.PublicKey
+	P2P           *p2p.Config
 }
 
-func NewConfig(keyperHTTPUrl string, signingKey *ecdsa.PrivateKey) (*Config, error) {
+func NewConfig(keyperHTTPUrl string, signingKey *ecdsa.PrivateKey, p2pConfig *p2p.Config) (*Config, error) {
 	parsedURL, err := url.Parse(keyperHTTPUrl)
 	if err != nil {
 		return nil, err
@@ -25,5 +28,6 @@ func NewConfig(keyperHTTPUrl string, signingKey *ecdsa.PrivateKey) (*Config, err
 		KeyperHTTPURL: parsedURL,
 		SigningKey:    signingKey,
 		PublicKey:     publicKey,
+		P2P:           p2pConfig,
 	}, nil
 }

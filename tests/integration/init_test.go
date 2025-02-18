@@ -13,10 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/common/database"
-	"github.com/shutter-network/shutter-service-api/internal/data"
-	"github.com/shutter-network/shutter-service-api/internal/router"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/common/database"
+	"github.com/shutter-network/shutter-api/internal/data"
+	"github.com/shutter-network/shutter-api/internal/router"
 	"github.com/stretchr/testify/suite"
 )
 

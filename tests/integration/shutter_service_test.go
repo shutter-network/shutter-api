@@ -18,9 +18,9 @@ import (
 	cryptorand "crypto/rand"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	httpError "github.com/shutter-network/shutter-service-api/internal/error"
-	"github.com/shutter-network/shutter-service-api/internal/service"
-	"github.com/shutter-network/shutter-service-api/internal/usecase"
+	httpError "github.com/shutter-network/shutter-api/internal/error"
+	"github.com/shutter-network/shutter-api/internal/service"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 )
 

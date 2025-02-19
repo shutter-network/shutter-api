@@ -38,11 +38,13 @@ func (w *Watcher) Start(ctx context.Context, runner service.Runner) error {
 				for _, key := range event.Keys {
 					log.Info().Msgf("Received decryption keys identity: %v", key.IdentityPreimage)
 					identityPreimage := identitypreimage.IdentityPreimage(key.IdentityPreimage)
-					w.dbQuery.InsertDecryptionKey(ctx, data.InsertDecryptionKeyParams{
+					if err := w.dbQuery.InsertDecryptionKey(ctx, data.InsertDecryptionKeyParams{
 						Eon:           event.Eon,
 						EpochID:       identityPreimage.Bytes(),
 						DecryptionKey: key.Key,
-					})
+					}); err != nil {
+						log.Err(err).Msg("failed to insert decryption key")
+					}
 				}
 			}
 		}

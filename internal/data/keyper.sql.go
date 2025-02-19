@@ -30,7 +30,7 @@ func (q *Queries) GetDecryptionKey(ctx context.Context, arg GetDecryptionKeyPara
 
 const insertDecryptionKey = `-- name: InsertDecryptionKey :exec
 INSERT INTO decryption_key (eon, epoch_id, decryption_key)
-VALUES ($1, $2, $3)
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
 `
 
 type InsertDecryptionKeyParams struct {

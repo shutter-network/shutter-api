@@ -36,6 +36,13 @@ func main() {
 		return
 	}
 
+	// Run migrations
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if err := database.RunMigrations(ctx, dbURL, migrationsPath); err != nil {
+		log.Err(err).Msg("failed to run database migrations")
+		return
+	}
+
 	rpc_url := os.Getenv("RPC_URL")
 	client, err := ethclient.Dial(rpc_url)
 	if err != nil {

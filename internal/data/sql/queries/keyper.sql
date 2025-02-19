@@ -6,4 +6,4 @@ WHERE eon = $1 AND epoch_id = $2;
 
 -- name: InsertDecryptionKey :exec
 INSERT INTO decryption_key (eon, epoch_id, decryption_key)
-VALUES ($1, $2, $3);
+VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;

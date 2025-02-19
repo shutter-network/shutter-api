@@ -36,7 +36,7 @@ func (w *Watcher) Start(ctx context.Context, runner service.Runner) error {
 				return ctx.Err()
 			case event := <-decryptionKeysChannel:
 				for _, key := range event.Keys {
-					log.Info().Msgf("Received decryption keys identity: %v", key.IdentityPreimage)
+					log.Info().Msgf("Received decryption keys for identity: %v", key.IdentityPreimage)
 					identityPreimage := identitypreimage.IdentityPreimage(key.IdentityPreimage)
 					if err := w.dbQuery.InsertDecryptionKey(ctx, data.InsertDecryptionKeyParams{
 						Eon:           event.Eon,

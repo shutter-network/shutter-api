@@ -38,7 +38,7 @@ func main() {
 	}
 
 	// Run migrations
-	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	migrationsPath := "/migrations"
 	if err := database.RunMigrations(ctx, dbURL, migrationsPath); err != nil {
 		log.Err(err).Msg("failed to run database migrations")
 		return

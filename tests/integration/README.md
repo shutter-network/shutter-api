@@ -14,6 +14,8 @@ Before running the tests, ensure that you have the following environment variabl
 - `SHUTTER_REGISTRY_CONTRACT_ADDRESS`
 - `KEY_BROADCAST_CONTRACT_ADDRESS`
 - `KEYPER_SET_MANAGER_CONTRACT_ADDRESS`
+- `P2P_BOOTSTRAP_ADDRESSES` - The addresses of the Keyper nodes to bootstrap the P2P network.
+- `P2P_DISCOVERY_NAMESPACE` - The discovery namespace for the P2P network.
 
 ## Prerequisites
 

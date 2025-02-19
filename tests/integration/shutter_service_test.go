@@ -18,6 +18,7 @@ import (
 	cryptorand "crypto/rand"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/shutter-network/shutter-api/common"
 	httpError "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/internal/service"
 	"github.com/shutter-network/shutter-api/internal/usecase"
@@ -210,14 +211,14 @@ func (s *TestShutterService) TestRequestDecryptCommitmentAfterTimestampReached()
 	body, err := io.ReadAll(recorder.Body)
 	s.Require().NoError(err)
 
-	var decryptionKeyResponse map[string][]byte
+	var decryptionKeyResponse map[string]string
 	err = json.Unmarshal(body, &decryptionKeyResponse)
 	s.Require().NoError(err)
 
 	decryptedMessage := decryptionKeyResponse["message"]
 
 	s.Require().NotEmpty(decryptedMessage)
-	s.Require().Equal(msg, decryptedMessage)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(msg)), decryptedMessage)
 }
 
 func (s *TestShutterService) TestRegisterIdentityInThePast() {
@@ -259,7 +260,6 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 	}
 	ctx := context.Background()
 	address := crypto.PubkeyToAddress(*s.config.PublicKey).Hex()
-
 	totalBulkRequests, err := strconv.Atoi(os.Getenv("TOTAL_BULK_REQUESTS"))
 	if err != nil {
 		totalBulkRequests = 3
@@ -270,7 +270,6 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 
 	block, err := s.ethClient.BlockByNumber(ctx, nil)
 	s.Require().NoError(err)
-
 	for i := 0; i < totalBulkRequests; i++ {
 		identityPrefix, err := generateRandomBytes(32)
 		s.Require().NoError(err)
@@ -313,7 +312,7 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 		identities[i] = res.Identity
 	}
 
-	time.Sleep(40 * time.Second)
+	time.Sleep(60 * time.Second)
 
 	for i := 0; i < totalBulkRequests; i++ {
 		decryptionKeyResponse := s.getDecryptionKeyRequest(identities[i], http.StatusOK)

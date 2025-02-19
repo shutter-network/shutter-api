@@ -7,8 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/identitypreimage"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/internal/data"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
 )
 
 type Watcher struct {

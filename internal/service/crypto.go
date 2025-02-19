@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/internal/error"
-	"github.com/shutter-network/shutter-service-api/internal/usecase"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/error"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 )
 
 type RegisterIdentityRequest struct {

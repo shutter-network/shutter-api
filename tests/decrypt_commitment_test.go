@@ -5,6 +5,7 @@ import (
 	cryptorand "crypto/rand"
 	"encoding/hex"
 	"math/rand"
+	"strings"
 
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 	"github.com/stretchr/testify/mock"
@@ -81,5 +82,7 @@ func (s *TestShutterService) TestDecryptionCommitment() {
 	encryptedCommitmentStringified := "0x" + hex.EncodeToString(encrypedCommitmentBytes)
 	decryptedCommitment, err := s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified)
 	s.Require().Nil(err)
-	s.Require().Equal(decryptedCommitment, msg)
+	dec, err := hex.DecodeString(strings.TrimPrefix(decryptedCommitment, "0x"))
+	s.Require().Nil(err)
+	s.Require().Equal(dec, msg)
 }

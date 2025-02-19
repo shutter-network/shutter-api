@@ -9,12 +9,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o shutter-service-api
+RUN go build -o shutter-api
 
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /app/shutter-service-api .
+COPY --from=builder /app/shutter-api .
 
 EXPOSE 5000
 
-CMD ["./shutter-service-api"]
+CMD ["./shutter-api"]

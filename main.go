@@ -7,6 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	shutterAPICommon "github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/common/database"
+	"github.com/shutter-network/shutter-api/internal/router"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -16,15 +20,12 @@ import (
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/keys"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2p"
-	shutterServiceCommon "github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/common/database"
-	_ "github.com/shutter-network/shutter-service-api/docs"
-	"github.com/shutter-network/shutter-service-api/internal/router"
-	"github.com/shutter-network/shutter-service-api/watcher"
+	_ "github.com/shutter-network/shutter-api/docs"
+	"github.com/shutter-network/shutter-api/watcher"
 )
 
-// @title			Shutter service API
-// @description	Shutter Service API is an encryption and decryption service that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
+// @title			Shutter API
+// @description	Shutter API is an encryption and decryption API that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
 func main() {
 	port := os.Getenv("SERVER_PORT")
 
@@ -59,7 +60,7 @@ func main() {
 	keyperSetManagerContractAddressStringified := os.Getenv("KEYPER_SET_MANAGER_CONTRACT_ADDRESS")
 	keyperSetManagerContractAddress := common.HexToAddress(keyperSetManagerContractAddressStringified)
 
-	contract, err := shutterServiceCommon.NewContract(client, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
+	contract, err := shutterAPICommon.NewContract(client, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
 	if err != nil {
 		log.Err(err).Msg("failed to instantiate shutter contracts")
 		return
@@ -108,7 +109,7 @@ func main() {
 	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
-	config, err := shutterServiceCommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
+	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return

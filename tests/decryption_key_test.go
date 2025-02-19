@@ -8,7 +8,7 @@ import (
 	"math/rand"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/shutter-network/shutter-service-api/common"
+	"github.com/shutter-network/shutter-api/common"
 	"github.com/stretchr/testify/mock"
 )
 

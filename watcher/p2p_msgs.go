@@ -9,7 +9,7 @@ import (
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2p"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2pmsg"
-	"github.com/shutter-network/shutter-service-api/common"
+	"github.com/shutter-network/shutter-api/common"
 )
 
 type P2PMessageWatcher struct {

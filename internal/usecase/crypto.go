@@ -20,9 +20,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/internal/data"
-	httpError "github.com/shutter-network/shutter-service-api/internal/error"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
+	httpError "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 )
 
@@ -460,7 +460,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	}, nil
 }
 
-func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitment string, identity string) ([]byte, *httpError.Http) {
+func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitment string, identity string) (string, *httpError.Http) {
 	if len(encryptedCommitment) == 0 {
 		log.Debug().Msg("empty encrypted commitment")
 		err := httpError.NewHttpError(
@@ -468,7 +468,7 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusBadRequest,
 		)
-		return nil, &err
+		return "", &err
 	}
 	encryptedCommitmentBytes, err := hex.DecodeString(strings.TrimPrefix(encryptedCommitment, "0x"))
 	if err != nil {
@@ -478,12 +478,12 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusBadRequest,
 		)
-		return nil, &err
+		return "", &err
 	}
 
 	decKeyResponse, httpErr := uc.GetDecryptionKey(ctx, identity)
 	if httpErr != nil {
-		return nil, httpErr
+		return "", httpErr
 	}
 
 	key, err := hex.DecodeString(strings.TrimPrefix(decKeyResponse.DecryptionKey, "0x"))
@@ -494,7 +494,7 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusInternalServerError,
 		)
-		return nil, &err
+		return "", &err
 	}
 
 	decryptionKey := new(shcrypto.EpochSecretKey)
@@ -506,7 +506,7 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusInternalServerError,
 		)
-		return nil, &err
+		return "", &err
 	}
 
 	encryptedMsg := new(shcrypto.EncryptedMessage)
@@ -518,7 +518,7 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusBadRequest,
 		)
-		return nil, &err
+		return "", &err
 	}
 
 	decryptedMsg, err := encryptedMsg.Decrypt(decryptionKey)
@@ -529,9 +529,10 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 			"",
 			http.StatusInternalServerError,
 		)
-		return nil, &err
+		return "", &err
 	}
-	return decryptedMsg, nil
+
+	return common.PrefixWith0x(hex.EncodeToString(decryptedMsg)), nil
 }
 
 func (uc *CryptoUsecase) getDecryptionKeyFromExternalKeyper(ctx context.Context, eon int64, identity string) (string, error) {

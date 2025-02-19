@@ -7,10 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
-	"github.com/shutter-network/shutter-service-api/common"
-	"github.com/shutter-network/shutter-service-api/internal/data"
-	"github.com/shutter-network/shutter-service-api/internal/usecase"
-	"github.com/shutter-network/shutter-service-api/tests/mock"
+	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
+	"github.com/shutter-network/shutter-api/internal/usecase"
+	"github.com/shutter-network/shutter-api/tests/mock"
 	"github.com/stretchr/testify/suite"
 )
 

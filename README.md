@@ -36,18 +36,18 @@ This documentation will guide you through:
 
 ## Prerequisites
 
-- **API Access to the Shutter Centralized Service**:  
+- **API Access**:
   At the moment, the access is free of charge. You only need to query the API endpoints at the addresses below:
-  - **Chiado**: `http://64.227.118.171:8001/api/[ADD_ENDPOINT]`
-  - **Mainnet**: TBD
+  - **Chiado**: `https://shutter-api.chiado.staging.shutter.network/api/[ADD_ENDPOINT]`
+  - **Mainnet**: `https://shutter.api.staging.shutter.network/api/[ADD_ENDPOINT]`
 
 - **Address of the Shutter Registry Contract**:
-  - **Chiado Address**: `0x43D1Aee2D61fb206b72c6bDd8a0F17Eb6BF1eF51`
-  - **Gnosis Address**: TBD
+  - **Chiado Address**: `0x2693a4Fb363AdD4356e6b80Ac5A27fF05FeA6D9F`
+  - **Gnosis Address**: `0x7D18359c2f49e4aEBc0df761B1152c31DE044e83`
 
 - **Address of the API**:
-  - **Chiado Address**: TBD
-  - **Gnosis Address**: TBD
+  - **Chiado Address**: `0xb9C303443c9af84777e60D5C987AbF0c43844918`
+  - **Gnosis Address**: `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`
 ---
 
 ## Endpoints
@@ -63,7 +63,7 @@ Refer to the `/register_identity` endpoint in the Swagger documentation for deta
 
 #### Example Request
 ```bash
-curl -X POST http://<API_BASE_URL>/register_identity \
+curl -X POST https://<API_BASE_URL>/register_identity \
 -H "Content-Type: application/json" \
 -d '{
   "decryptionTimestamp": 1735044061,
@@ -90,7 +90,7 @@ Refer to the Swagger documentation for specifics on this endpoint.
 
 #### Example Request
 ```bash
-curl -X GET "http://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+curl -X GET "https://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
 ```
 
 #### Example Response
@@ -172,8 +172,8 @@ func main() {
 }
 ```
 
-You can also translate the code into JavaScript if you prefer to use the JavaScript SDK:
-[Shutter JavaScript SDK on npm](https://www.npmjs.com/package/@shutter-network/shutter-crypto)
+> [!NOTE]
+> We are currently working on a Typescript SDK. We will update the docs when it is ready to be used.
 
 ### 3. Retrieve the Decryption Key
 
@@ -183,7 +183,7 @@ Refer to the Swagger documentation for detailed usage.
 
 #### Example Request
 ```bash
-curl -X GET "http://<API_BASE_URL>/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
+curl -X GET "https://<API_BASE_URL>/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
 ```
 
 #### Example Response
@@ -203,17 +203,19 @@ Refer to the Swagger documentation for endpoint details.
 
 #### Example Request
 ```bash
-curl -X GET "http://<API_BASE_URL>/decrypt_commitment?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75&encryptedCommitment=0x03b5685a460a95ba628e04b24155d6722f7c4e376a1627f714a4ae9cecd2982e005eff12ac8150b8842c29f8d5eaf4d0da0b626f762b4826d779d8969b577acb28df96cab026aa57c00cd74b07ca51e8c0c1a59933e29a728311900ebfc26c6804260914c96cb10dbd6d2ed3f6cb77788a74b5aae5f4ce6f40be53310a0524d42d5a6f03b5c1517ec097553733e228276fcdfc4b569f7ef4311a461d68819d634c"
+curl -X GET "https://<API_BASE_URL>/decrypt_commitment?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75&encryptedCommitment=0x03b5685a460a95ba628e04b24155d6722f7c4e376a1627f714a4ae9cecd2982e005eff12ac8150b8842c29f8d5eaf4d0da0b626f762b4826d779d8969b577acb28df96cab026aa57c00cd74b07ca51e8c0c1a59933e29a728311900ebfc26c6804260914c96cb10dbd6d2ed3f6cb77788a74b5aae5f4ce6f40be53310a0524d42d5a6f03b5c1517ec097553733e228276fcdfc4b569f7ef4311a461d68819d634c"
 ```
 
 #### Example Response
 ```json
 {
-  "decrypted_message": "please hide this message"
+  "decrypted_message": "0x706c6561736520686964652074686973206d657373616765"
 }
 ```
 
-> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `http://64.227.118.171:8001/api`.
+The decrypted message is returned in its hex format. To get the initial message, convert the decrypted message to string.
+
+> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `https://shutter.api.staging.shutter.network/api`.
 
 ## Future Features
 
@@ -235,8 +237,8 @@ The Shutter system uses threshold encryption and distributed cryptographic opera
 
 For detailed API specifications, including parameters, responses, and error codes, visit the Swagger Documentation:
 
-- [Chiado Swagger Documentation](http://64.227.118.171:8001/docs/index.html)
-- **Mainnet**: Documentation link TBD
+- [Chiado Swagger Documentation](https://shutter-api.chiado.staging.shutter.network/docs/index.html)
+- [Mainnet Swagger Documentation](https://shutter.api.staging.shutter.network/docs/index.html)
 
 ## Support
 

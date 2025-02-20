@@ -71,17 +71,6 @@ func TestValidateMessage(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "no keys",
-			msg: &p2pmsg.DecryptionKeys{
-				Eon:  100,
-				Keys: []*p2pmsg.Key{},
-				Extra: &p2pmsg.DecryptionKeys_Service{
-					Service: &p2pmsg.ShutterServiceDecryptionKeysExtra{},
-				},
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {

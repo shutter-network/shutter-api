@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/address"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/env"
@@ -29,6 +29,29 @@ import (
 func main() {
 	port := os.Getenv("SERVER_PORT")
 
+	// Get log level from environment variable, default to "info"
+	levelStr := strings.ToLower(os.Getenv("LOG_LEVEL"))
+	level := zerolog.InfoLevel
+
+	switch levelStr {
+	case "trace":
+		level = zerolog.TraceLevel
+	case "debug":
+		level = zerolog.DebugLevel
+	case "info":
+		level = zerolog.InfoLevel
+	case "warn":
+		level = zerolog.WarnLevel
+	case "error":
+		level = zerolog.ErrorLevel
+	case "fatal":
+		level = zerolog.FatalLevel
+	case "panic":
+		level = zerolog.PanicLevel
+	}
+
+	zerolog.SetGlobalLevel(level)
+
 	ctx := context.Background()
 	dbURL := database.GetDBURL()
 	db, err := database.NewDB(ctx, dbURL)
@@ -38,7 +61,7 @@ func main() {
 	}
 
 	// Run migrations
-	migrationsPath := "/migrations"
+	migrationsPath := "./migrations"
 	if err := database.RunMigrations(ctx, dbURL, migrationsPath); err != nil {
 		log.Err(err).Msg("failed to run database migrations")
 		return
@@ -74,12 +97,15 @@ func main() {
 	}
 
 	p2pConfig := p2p.Config{}
-	p2pkey, err := keys.GenerateLibp2pPrivate(rand.Reader)
-	if err != nil {
-		log.Err(err).Msg("failed to generate p2p key")
-		panic(err)
+	var p2pKey keys.Libp2pPrivate
+	p2pKeyString := os.Getenv("P2P_KEY")
+	if p2pKeyString == "" {
+		panic("P2P key not provided in the env")
 	}
-	p2pConfig.P2PKey = p2pkey
+	if err := p2pKey.UnmarshalText([]byte(p2pKeyString)); err != nil {
+		panic("error unmarshalling P2P key")
+	}
+	p2pConfig.P2PKey = &p2pKey
 
 	bootstrapAddressesStringified := os.Getenv("P2P_BOOTSTRAP_ADDRESSES")
 	if bootstrapAddressesStringified == "" {
@@ -93,13 +119,19 @@ func main() {
 		bootstrapP2PAddresses[i] = address.MustP2PAddress(addr)
 	}
 	p2pConfig.CustomBootstrapAddresses = bootstrapP2PAddresses
+
+	p2pPort := os.Getenv("P2P_PORT")
+	if p2pPort == "" {
+		p2pPort = "23003"
+	}
+
 	p2pConfig.ListenAddresses = []*address.P2PAddress{
-		address.MustP2PAddress("/ip4/0.0.0.0/tcp/23003"),
-		address.MustP2PAddress("/ip4/0.0.0.0/udp/23003/quic-v1"),
-		address.MustP2PAddress("/ip4/0.0.0.0/udp/23003/quic-v1/webtransport"),
-		address.MustP2PAddress("/ip6/::/tcp/23003"),
-		address.MustP2PAddress("/ip6/::/udp/23003/quic-v1"),
-		address.MustP2PAddress("/ip6/::/udp/23003/quic-v1/webtransport"),
+		address.MustP2PAddress("/ip4/0.0.0.0/tcp/" + p2pPort),
+		address.MustP2PAddress("/ip4/0.0.0.0/udp/" + p2pPort + "/quic-v1"),
+		address.MustP2PAddress("/ip4/0.0.0.0/udp/" + p2pPort + "/quic-v1/webtransport"),
+		address.MustP2PAddress("/ip6/::/tcp/" + p2pPort),
+		address.MustP2PAddress("/ip6/::/udp/" + p2pPort + "/quic-v1"),
+		address.MustP2PAddress("/ip6/::/udp/" + p2pPort + "/quic-v1/webtransport"),
 	}
 	p2pEnviroment, err := strconv.ParseInt(os.Getenv("P2P_ENVIRONMENT"), 10, 0)
 	if err != nil {

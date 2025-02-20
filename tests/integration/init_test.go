@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -74,7 +75,9 @@ func (s *TestShutterService) SetupSuite() {
 		address.MustP2PAddress("/ip6/::/udp/23003/quic-v1"),
 		address.MustP2PAddress("/ip6/::/udp/23003/quic-v1/webtransport"),
 	}
-	p2pConfig.Environment = env.Environment(0)
+	p2pEnviroment, err := strconv.ParseInt(os.Getenv("P2P_ENVIRONMENT"), 10, 0)
+	s.Require().NoError(err)
+	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
 	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)

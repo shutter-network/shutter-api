@@ -14,6 +14,7 @@ RUN go build -o shutter-api
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/shutter-api .
+COPY migrations ./migrations
 
 EXPOSE 5000
 

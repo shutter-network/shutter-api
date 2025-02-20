@@ -2,15 +2,26 @@ package main
 
 import (
 	"context"
+	"os"
+	"strconv"
+	"strings"
+
 	shutterAPICommon "github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/common/database"
 	"github.com/shutter-network/shutter-api/internal/router"
-	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/address"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/env"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/keys"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2p"
+	_ "github.com/shutter-network/shutter-api/docs"
+	"github.com/shutter-network/shutter-api/watcher"
 )
 
 // @title			Shutter API
@@ -18,11 +29,41 @@ import (
 func main() {
 	port := os.Getenv("SERVER_PORT")
 
+	// Get log level from environment variable, default to "info"
+	levelStr := strings.ToLower(os.Getenv("LOG_LEVEL"))
+	level := zerolog.InfoLevel
+
+	switch levelStr {
+	case "trace":
+		level = zerolog.TraceLevel
+	case "debug":
+		level = zerolog.DebugLevel
+	case "info":
+		level = zerolog.InfoLevel
+	case "warn":
+		level = zerolog.WarnLevel
+	case "error":
+		level = zerolog.ErrorLevel
+	case "fatal":
+		level = zerolog.FatalLevel
+	case "panic":
+		level = zerolog.PanicLevel
+	}
+
+	zerolog.SetGlobalLevel(level)
+
 	ctx := context.Background()
 	dbURL := database.GetDBURL()
 	db, err := database.NewDB(ctx, dbURL)
 	if err != nil {
 		log.Info().Err(err).Msg("failed to initialize db")
+		return
+	}
+
+	// Run migrations
+	migrationsPath := "./migrations"
+	if err := database.RunMigrations(ctx, dbURL, migrationsPath); err != nil {
+		log.Err(err).Msg("failed to run database migrations")
 		return
 	}
 
@@ -55,11 +96,64 @@ func main() {
 		log.Err(err).Msg("failed to parse signing key")
 	}
 
-	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey)
+	p2pConfig := p2p.Config{}
+	var p2pKey keys.Libp2pPrivate
+	p2pKeyString := os.Getenv("P2P_KEY")
+	if p2pKeyString == "" {
+		panic("P2P key not provided in the env")
+	}
+	if err := p2pKey.UnmarshalText([]byte(p2pKeyString)); err != nil {
+		panic("error unmarshalling P2P key")
+	}
+	p2pConfig.P2PKey = &p2pKey
+
+	bootstrapAddressesStringified := os.Getenv("P2P_BOOTSTRAP_ADDRESSES")
+	if bootstrapAddressesStringified == "" {
+		panic("bootstrap addresses not provided in the env")
+	}
+	bootstrapAddresses := strings.Split(bootstrapAddressesStringified, ",")
+
+	bootstrapP2PAddresses := make([]*address.P2PAddress, len(bootstrapAddresses))
+
+	for i, addr := range bootstrapAddresses {
+		bootstrapP2PAddresses[i] = address.MustP2PAddress(addr)
+	}
+	p2pConfig.CustomBootstrapAddresses = bootstrapP2PAddresses
+
+	p2pPort := os.Getenv("P2P_PORT")
+	if p2pPort == "" {
+		p2pPort = "23003"
+	}
+
+	p2pConfig.ListenAddresses = []*address.P2PAddress{
+		address.MustP2PAddress("/ip4/0.0.0.0/tcp/" + p2pPort),
+		address.MustP2PAddress("/ip4/0.0.0.0/udp/" + p2pPort + "/quic-v1"),
+		address.MustP2PAddress("/ip4/0.0.0.0/udp/" + p2pPort + "/quic-v1/webtransport"),
+		address.MustP2PAddress("/ip6/::/tcp/" + p2pPort),
+		address.MustP2PAddress("/ip6/::/udp/" + p2pPort + "/quic-v1"),
+		address.MustP2PAddress("/ip6/::/udp/" + p2pPort + "/quic-v1/webtransport"),
+	}
+	p2pEnviroment, err := strconv.ParseInt(os.Getenv("P2P_ENVIRONMENT"), 10, 0)
+	if err != nil {
+		log.Err(err).Msg("failed to parse p2p environment")
+		panic(err)
+	}
+	p2pConfig.Environment = env.Environment(p2pEnviroment)
+	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
+
+	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
 	}
 	app := router.NewRouter(db, contract, client, config)
+	watcher := watcher.NewWatcher(config, db)
+	group, deferFn := service.RunBackground(ctx, watcher)
+	defer deferFn()
+	go func() {
+		if err := group.Wait(); err != nil {
+			log.Err(err).Msg("watcher service failed")
+		}
+	}()
 	app.Run("0.0.0.0:" + port)
 }

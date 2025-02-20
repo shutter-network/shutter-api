@@ -5,12 +5,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DB_HOST:
-      DB_PORT:
-      DB_USER:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
       DB_PASSWORD:
-      DB_NAME:
-      DB_SSL_MODE:
+      DB_NAME: shutter_api
+      DB_SSL_MODE: disable
       RPC_URL:
       SHUTTER_REGISTRY_CONTRACT_ADDRESS:
       KEY_BROADCAST_CONTRACT_ADDRESS:
@@ -18,12 +18,19 @@ services:
       KEYPER_HTTP_URL:
       SIGNING_KEY:
       SERVER_PORT: 8001
+      P2P_PORT: 23003
+      P2P_KEY:
+      P2P_BOOTSTRAP_ADDRESSES:
+      P2P_DISCOVERY_NAMESPACE:
+      P2P_ENVIRONMENT:
+      LOG_LEVEL:
     ports:
       - "8001:8001"
+      - "23003:23003"
     command: ["./shutter-api"]
-    networks:
-      - shutter-keyper-deployment_default
-      - default
+    depends_on:
+      db:
+        condition: service_healthy
     labels:
       caddy: "${SERVICE_DOMAIN_NAME}"
       caddy.@browser: "method GET"
@@ -31,6 +38,23 @@ services:
       caddy.header.Access-Control-Allow-Origin: "*"
       caddy.header.Access-Control-Allow-Methods: "GET, POST, OPTIONS"
       caddy.header.Access-Control-Allow-Headers: "Content-Type, Authorization"
+
+  db:
+    image: postgres:14.12
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=shutter_api
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      start_interval: "2s"
+      start_period: "30s"
+      interval: "30s"
+      timeout: "5s"
+      retries: 3
 
   caddy:
     image: lucaslorentz/caddy-docker-proxy:latest
@@ -44,9 +68,3 @@ services:
       - "443:443/udp"
     labels:
       caddy.email: "devops@brainbot.com"
-    networks:
-      - shutter-keyper-deployment_default
-
-networks:
-  shutter-keyper-deployment_default:
-    external: true

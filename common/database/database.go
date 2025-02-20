@@ -2,11 +2,13 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
+	"github.com/pressly/goose/v3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -47,4 +49,14 @@ func GetDBURL() string {
 	}
 	databaseURL := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", user, password, dbAddr, dbName, sslMode)
 	return databaseURL
+}
+
+func RunMigrations(ctx context.Context, dbURL string, migrationsPath string) error {
+	migrationConn, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		return err
+	}
+	defer migrationConn.Close()
+
+	return goose.RunContext(ctx, "up", migrationConn, migrationsPath)
 }

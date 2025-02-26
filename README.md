@@ -8,10 +8,10 @@ Welcome to the **Shutter API** documentation! This guide will help you integrate
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Endpoints](#endpoints)
-  - [Register an Identity with a Decryption Trigger](#1-register-an-identity-with-a-decryption-trigger)
-  - [Retrieve the Encryption Data](#2-retrieve-the-encryption-data)
-  - [Retrieve the Decryption Key](#3-retrieve-the-decryption-key)
-  - [Decrypt Commitments](#4-decrypt-commitments)
+   3.1 [Register an Identity with a Decryption Trigger](#1-register-an-identity-with-a-decryption-trigger)
+   3.2 [Retrieve the Encryption Data](#2-retrieve-the-encryption-data)
+   3.3 [Retrieve the Decryption Key](#3-retrieve-the-decryption-key)
+   3.4 [Decrypt Commitments](#4-decrypt-commitments)
 4. [Future features](#future-features)
 5. [FAQs](#faqs)
 6. [Swagger Documentation](#swagger-documentation)
@@ -39,7 +39,7 @@ This documentation will guide you through:
 - **API Access**:
   At the moment, the access is free of charge. You only need to query the API endpoints at the addresses below:
   - **Chiado**: `https://shutter-api.chiado.staging.shutter.network/api/[ADD_ENDPOINT]`
-  - **Mainnet**: `https://shutter.api.staging.shutter.network/api/[ADD_ENDPOINT]`
+  - **Mainnet**: `https://shutter-api.shutter.network/api/[ADD_ENDPOINT]`
 
 - **Address of the Shutter Registry Contract**:
   - **Chiado Address**: `0x2693a4Fb363AdD4356e6b80Ac5A27fF05FeA6D9F`
@@ -215,7 +215,7 @@ curl -X GET "https://<API_BASE_URL>/decrypt_commitment?identity=0x8c232eae4f9572
 
 The decrypted message is returned in its hex format. To get the initial message, convert the decrypted message to string.
 
-> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `https://shutter.api.staging.shutter.network/api`.
+> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `https://shutter-api.staging.shutter.network/api`.
 
 ## Future Features
 
@@ -238,7 +238,7 @@ The Shutter system uses threshold encryption and distributed cryptographic opera
 For detailed API specifications, including parameters, responses, and error codes, visit the Swagger Documentation:
 
 - [Chiado Swagger Documentation](https://shutter-api.chiado.staging.shutter.network/docs/index.html)
-- [Mainnet Swagger Documentation](https://shutter.api.staging.shutter.network/docs/index.html)
+- [Mainnet Swagger Documentation](https://shutter-api.shutter.network/docs/index.html)
 
 ## Support
 

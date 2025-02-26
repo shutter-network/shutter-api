@@ -215,7 +215,7 @@ curl -X GET "https://<API_BASE_URL>/decrypt_commitment?identity=0x8c232eae4f9572
 
 The decrypted message is returned in its hex format. To get the initial message, convert the decrypted message to string.
 
-> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `https://shutter-api.staging.shutter.network/api`.
+> **Note**: Replace `<API_BASE_URL>` in all example requests with the actual base URL for the API, found in the pre-requisite section, such as `https://shutter-api.shutter.network/api`.
 
 ## Future Features
 

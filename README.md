@@ -43,7 +43,7 @@ This documentation will guide you through:
 
 - **Address of the Shutter Registry Contract**:
   - **Chiado Address**: `0x2693a4Fb363AdD4356e6b80Ac5A27fF05FeA6D9F`
-  - **Gnosis Address**: `0x7D18359c2f49e4aEBc0df761B1152c31DE044e83`
+  - **Gnosis Address**: `0x694e5de9345d39C148DA90e6939A3fd2142267D9`
 
 - **Address of the API**:
   - **Chiado Address**: `0xb9C303443c9af84777e60D5C987AbF0c43844918`

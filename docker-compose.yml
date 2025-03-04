@@ -35,7 +35,6 @@ services:
       caddy: "${SERVICE_DOMAIN_NAME}"
       caddy.@browser: "method GET"
       caddy.reverse_proxy: "{{ upstreams 8001 }}"
-      caddy.header.Access-Control-Allow-Origin: "*"
       caddy.header.Access-Control-Allow-Methods: "GET, POST, OPTIONS"
       caddy.header.Access-Control-Allow-Headers: "Content-Type, Authorization"
 

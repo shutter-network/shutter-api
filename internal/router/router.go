@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shutter-network/shutter-api/common"
@@ -21,6 +22,7 @@ func NewRouter(
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(cors.Default())
 	router.Use(middleware.ErrorHandler())
 
 	cryptoService := service.NewCryptoService(db, contract, ethClient, config)

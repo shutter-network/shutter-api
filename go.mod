@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	github.com/ethereum/go-ethereum v1.13.11
+	github.com/gin-contrib/cors v1.7.3
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/libp2p/go-libp2p-pubsub v0.11.0
 	github.com/shutter-network/contracts/v2 v2.0.0-beta.2.0.20250108084129-3b743179373a
@@ -30,7 +31,6 @@ require (
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
-	github.com/gin-contrib/cors v1.7.3 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect

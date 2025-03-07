@@ -172,8 +172,27 @@ func main() {
 }
 ```
 
-> [!NOTE]
-> We are currently working on a Typescript SDK. We will update the docs when it is ready to be used.
+#### Encrypting Commitments in TypeScript
+
+You can also use our [Shutter TypeScript SDK](https://github.com/shutter-network/shutter-sdk) to easily encrypt commitments:
+
+```ts
+import { encryptData } from "@shutter-network/shutter-sdk";
+import { stringToHex } from "viem";
+
+// Encryption data provided by the Shutter API
+const eonKeyHex = "0x57af5437a84ef50e5ed75772c18ae38b168bb07c50cadb65fc6136604e662255";
+const identityPreimageHex = "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75";
+const msgHex = stringToHex("please hide this message")
+
+// some random sigma
+const sigmaHex = "0x312c10b186086d502ba683cffc2ae650d53b508904b3c430df8e7d5aa336c0f5";
+
+// Encrypt the message
+const encryptedCommitment = await encryptData(message, eonPublicKey, identityPreimageHex, sigma);
+// Print the encrypted commitment
+console.log("Encrypted Commitment:", encryptedCommitment);
+```
 
 ### 3. Retrieve the Decryption Key
 

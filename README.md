@@ -1,7 +1,5 @@
 # Shutter API Documentation for dApp Developers
 
-Welcome to the **Shutter API** documentation! This guide will help you integrate Shutter's Commit and Reveal Scheme into your decentralized application (dApp). The Shutter system provides a secure, decentralized, and tamper-proof commit-and-reveal workflow, ensuring integrity and confidentiality in your application.
-
 ## Disclaimer
 
 This software is in its early stages of development. Users are strongly advised to exercise caution and not entrust any assets or sensitive information of high value to this API until further maturity and decentralization are achieved.
@@ -11,6 +9,11 @@ Please note that all threshold cryptography systems and multi-party computation 
 This project is released as open source and provided "as is" without any warranties, express or implied. The developers and contributors assume no liability for any issues, losses, or damages arising from the use or misuse of this API. Use at your own risk.
 
 ---
+
+## Welcome to the **Shutter API** documentation!
+
+This guide will help you integrate Shutter's Commit and Reveal Scheme into your decentralized application (dApp). The Shutter system provides a secure, decentralized, and tamper-proof commit-and-reveal workflow, ensuring integrity and confidentiality in your application.
+
 ## Table of Contents
 
 1. [Overview](#overview)

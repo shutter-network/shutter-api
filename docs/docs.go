@@ -79,7 +79,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity, pass the address TBD.",
+                        "description": "Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
                         "name": "address",
                         "in": "query",
                         "required": true
@@ -309,7 +309,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "Shutter API",
-	Description:      "Shutter API is an encryption and decryption service that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.",
+	Description:      "Shutter API is an encryption and decryption API that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

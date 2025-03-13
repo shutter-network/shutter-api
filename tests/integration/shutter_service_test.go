@@ -265,7 +265,7 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 	}
 
 	encryptedMessages := make([]*shcrypto.EncryptedMessage, totalBulkRequests)
-	identities := make([]string, 0)
+	identities := make([]string, totalBulkRequests)
 
 	for i := 0; i < totalBulkRequests; i++ {
 		id, err := generateRandomBytes(32)
@@ -307,6 +307,7 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 		s.Require().NoError(err)
 		s.registerIdentityRequest(jsonData, http.StatusOK)
 
+		identities[i] = res.Identity
 	}
 
 	time.Sleep(60 * time.Second)

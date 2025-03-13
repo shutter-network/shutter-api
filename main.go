@@ -9,6 +9,7 @@ import (
 	shutterAPICommon "github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/common/database"
 	"github.com/shutter-network/shutter-api/internal/router"
+	"github.com/shutter-network/shutter-api/metrics"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,6 +19,7 @@ import (
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/address"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/env"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/encodeable/keys"
+	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/metricsserver"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/p2p"
 	_ "github.com/shutter-network/shutter-api/docs"
@@ -72,6 +74,37 @@ func main() {
 	if err != nil {
 		log.Err(err).Msg("failed to initialize rpc client")
 		return
+	}
+
+	metricsEnabledStr := os.Getenv("METRICS_ENABLED")
+	metricsEnabled, err := strconv.ParseBool(metricsEnabledStr)
+	if err != nil {
+		log.Err(err).Msg("failed to get METRICS_ENABLED env")
+		metricsEnabled = false
+	}
+
+	metricsHost := os.Getenv("METRICS_HOST")
+	if metricsHost == "" {
+		metricsHost = "[::]"
+	}
+
+	metricsPortStr := os.Getenv("METRICS_PORT")
+	metricsPort, err := strconv.ParseUint(metricsPortStr, 10, 0)
+	if err != nil || metricsPort == 0 {
+		log.Err(err).Msg("failed to get METRICS_PORT env")
+		metricsPort = 4000
+	}
+
+	metricsConfig := &metricsserver.MetricsConfig{
+		Enabled: metricsEnabled,
+		Host:    metricsHost,
+		Port:    uint16(metricsPort),
+	}
+	var metricsServer *metricsserver.MetricsServer
+
+	if metricsEnabled {
+		metrics.InitMetrics()
+		metricsServer = metricsserver.New(metricsConfig)
 	}
 
 	shutterRegistryContractAddressStringified := os.Getenv("SHUTTER_REGISTRY_CONTRACT_ADDRESS")
@@ -150,6 +183,17 @@ func main() {
 	watcher := watcher.NewWatcher(config, db)
 	group, deferFn := service.RunBackground(ctx, watcher)
 	defer deferFn()
+
+	if metricsConfig.Enabled {
+		group, deferFn := service.RunBackground(ctx, metricsServer)
+		defer deferFn()
+		go func() {
+			if err := group.Wait(); err != nil {
+				log.Err(err).Msg("metrics server failed")
+			}
+		}()
+	}
+
 	go func() {
 		if err := group.Wait(); err != nil {
 			log.Err(err).Msg("watcher service failed")

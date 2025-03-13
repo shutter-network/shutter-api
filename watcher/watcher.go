@@ -9,6 +9,7 @@ import (
 	"github.com/shutter-network/rolling-shutter/rolling-shutter/medley/service"
 	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/internal/data"
+	"github.com/shutter-network/shutter-api/metrics"
 )
 
 type Watcher struct {
@@ -45,6 +46,7 @@ func (w *Watcher) Start(ctx context.Context, runner service.Runner) error {
 					}); err != nil {
 						log.Err(err).Msg("failed to insert decryption key")
 					}
+					metrics.TotalDecryptionKeysReceived.Inc()
 				}
 			}
 		}

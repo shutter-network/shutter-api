@@ -24,9 +24,13 @@ services:
       P2P_DISCOVERY_NAMESPACE:
       P2P_ENVIRONMENT:
       LOG_LEVEL:
+      METRICS_ENABLED:
+      METRICS_HOST:
+      METRICS_PORT:
     ports:
       - "8001:8001"
       - "23003:23003"
+      - "4000:4000"
     command: ["./shutter-api"]
     depends_on:
       db:
@@ -67,3 +71,10 @@ services:
       - "443:443/udp"
     labels:
       caddy.email: "devops@brainbot.com"
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: my_node_exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"

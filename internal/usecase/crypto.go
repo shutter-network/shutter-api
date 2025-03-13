@@ -23,6 +23,7 @@ import (
 	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/internal/data"
 	httpError "github.com/shutter-network/shutter-api/internal/error"
+	"github.com/shutter-network/shutter-api/metrics"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 )
 
@@ -128,6 +129,7 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identityBytes))
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying contract")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error while querying for identity from the contract",
 			"",
@@ -260,6 +262,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	blockNumber, err := uc.ethClient.BlockNumber(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for recent block")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for recent block",
 			"",
@@ -271,6 +274,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying keyper set index")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for keyper set index",
 			"",
@@ -282,6 +286,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for eon key")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for eon key",
 			"",
@@ -365,6 +370,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	blockNumber, err := uc.ethClient.BlockNumber(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for recent block")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for recent block",
 			"",
@@ -376,6 +382,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying keyper set index")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for keyper set index",
 			"",
@@ -387,6 +394,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for eon key")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for eon key",
 			"",
@@ -409,6 +417,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	chainId, err := uc.ethClient.ChainID(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while quering chain id")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying chain id",
 			"",
@@ -440,6 +449,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	tx, err := uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")
+		metrics.TotalFailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"failed to register identity",
 			"",
@@ -451,6 +461,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	// we return the transaction hash in response to allow
 	// users the ability to monitor it themselves
 
+	metrics.TotalSuccessfulIdentityRegistration.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),

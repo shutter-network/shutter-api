@@ -258,7 +258,6 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 	if testing.Short() {
 		s.T().Skip("skipping integration test")
 	}
-	ctx := context.Background()
 	address := crypto.PubkeyToAddress(*s.config.PublicKey).Hex()
 	totalBulkRequests, err := strconv.Atoi(os.Getenv("TOTAL_BULK_REQUESTS"))
 	if err != nil {
@@ -268,10 +267,9 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 	encryptedMessages := make([]*shcrypto.EncryptedMessage, totalBulkRequests)
 	identities := make([]string, totalBulkRequests)
 
-	block, err := s.ethClient.BlockByNumber(ctx, nil)
-	s.Require().NoError(err)
 	for i := 0; i < totalBulkRequests; i++ {
-		identityPrefix, err := generateRandomBytes(32)
+		id, err := generateRandomBytes(32)
+		identityPrefix := crypto.Keccak256(bytes.Join([][]byte{id, []byte(strconv.Itoa(i))}, nil))
 		s.Require().NoError(err)
 		identityPrefixStringified := hex.EncodeToString(identityPrefix)
 
@@ -298,7 +296,7 @@ func (s *TestShutterService) TestBulkRequestDecryptionKeyAfterTimestampReached()
 		encryptedMessage := shcrypto.Encrypt(msg, eonPublicKey, epochID, sigma)
 		encryptedMessages[i] = encryptedMessage
 
-		decryptionTimestamp := block.Header().Time + 20
+		decryptionTimestamp := time.Now().Unix() + 20
 
 		reqBody := service.RegisterIdentityRequest{
 			DecryptionTimestamp: uint64(decryptionTimestamp),

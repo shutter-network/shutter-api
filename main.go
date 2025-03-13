@@ -189,7 +189,7 @@ func main() {
 		defer deferFn()
 		go func() {
 			if err := group.Wait(); err != nil {
-				log.Err(err).Msg("watcher service failed")
+				log.Err(err).Msg("metrics server failed")
 			}
 		}()
 	}

@@ -23,6 +23,7 @@ func (s *TestShutterService) TestRegisterIdentity() {
 	blockNumber := rand.Uint64()
 
 	eon := rand.Uint64()
+	timestamp := 0
 
 	newSigner, err := bind.NewKeyedTransactorWithChainID(s.config.SigningKey, big.NewInt(GnosisMainnetChainID))
 	s.Require().NoError(err)
@@ -35,21 +36,32 @@ func (s *TestShutterService) TestRegisterIdentity() {
 	s.ethClient.
 		On("BlockNumber", ctx).
 		Return(blockNumber, nil).
-		Once()
+		Twice()
 
 	s.keyperSetManagerContract.
 		On("GetKeyperSetIndexByBlock", nil, blockNumber).
 		Return(eon, nil).
-		Once()
+		Twice()
 
 	s.keyBroadcastContract.
 		On("GetEonKey", nil, eon).
 		Return(eonPublicKey.Marshal(), nil).
-		Once()
+		Twice()
 
 	s.ethClient.
 		On("ChainID", ctx).
 		Return(big.NewInt(GnosisMainnetChainID), nil).
+		Twice()
+
+	s.shutterRegistryContract.
+		On("Registrations", mock.AnythingOfType("*bind.CallOpts"), [32]byte(identity)).
+		Return(struct {
+			Eon       uint64
+			Timestamp uint64
+		}{
+			Eon:       uint64(eon),
+			Timestamp: uint64(timestamp),
+		}, nil).
 		Once()
 
 	s.shutterRegistryContract.
@@ -59,6 +71,21 @@ func (s *TestShutterService) TestRegisterIdentity() {
 
 	data, err := s.cryptoUsecase.RegisterIdentity(ctx, uint64(decryptionTimestamp), identityPrefixStringified)
 	s.Require().Nil(err)
+
+	timestamp = int(rand.Uint64())
+	s.shutterRegistryContract.
+		On("Registrations", mock.AnythingOfType("*bind.CallOpts"), [32]byte(identity)).
+		Return(struct {
+			Eon       uint64
+			Timestamp uint64
+		}{
+			Eon:       uint64(eon),
+			Timestamp: uint64(timestamp),
+		}, nil).
+		Once()
+
+	_, err = s.cryptoUsecase.RegisterIdentity(ctx, uint64(decryptionTimestamp), identityPrefixStringified)
+	s.Require().Error(err)
 
 	s.Require().Equal(data.Eon, eon)
 	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), data.Identity)

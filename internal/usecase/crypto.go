@@ -439,6 +439,28 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 
 	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)
 
+	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identity))
+	if err != nil {
+		log.Err(err).Msg("err encountered while querying contract")
+		metrics.TotalFailedRPCCalls.Inc()
+		err := httpError.NewHttpError(
+			"error while querying for registrations from the contract",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &err
+	}
+
+	if registrationData.Timestamp > 0 {
+		log.Err(err).Msg("identity already registered")
+		err := httpError.NewHttpError(
+			"identity already registered",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
 	publicAddress := crypto.PubkeyToAddress(*uc.config.PublicKey)
 
 	opts := bind.TransactOpts{

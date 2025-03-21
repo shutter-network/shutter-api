@@ -200,6 +200,9 @@ func (s *TestShutterService) TestRequestDecryptCommitmentAfterTimestampReached()
 
 	time.Sleep(30 * time.Second)
 
+	errRegisterIdentity := s.registerIdentityRequestError(jsonData, http.StatusBadRequest)
+	s.Require().Equal(errRegisterIdentity.Description, "identity already registered")
+
 	query := fmt.Sprintf("?identity=%s&encryptedCommitment=%s", res.Identity, encryptedCommitmentStringified)
 	url := "/api/decrypt_commitment" + query
 

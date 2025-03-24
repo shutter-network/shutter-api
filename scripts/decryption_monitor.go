@@ -33,11 +33,6 @@ var (
 	stopChan = make(chan os.Signal, 1)
 )
 
-type BaseResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error,omitempty"`
-}
-
 type RegisterIdentityResponse struct {
 	Eon            uint64 `json:"eon"`
 	Identity       string `json:"identity"`

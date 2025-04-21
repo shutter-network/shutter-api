@@ -179,10 +179,20 @@ func main() {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
 	}
-	app := router.NewRouter(db, contract, client, config)
-	watcher := watcher.NewWatcher(config, db)
-	group, deferFn := service.RunBackground(ctx, watcher)
+	app, limiter := router.NewRouter(db, contract, client, config)
+	group, deferFn := service.RunBackground(ctx, limiter)
 	defer deferFn()
+
+	go func() {
+		if err := group.Wait(); err != nil {
+			log.Err(err).Msg("ipratelimiter service failed")
+			panic(err)
+		}
+	}()
+
+	watcher := watcher.NewWatcher(config, db)
+	group, watcherdeferFn := service.RunBackground(ctx, watcher)
+	defer watcherdeferFn()
 
 	if metricsConfig.Enabled {
 		group, deferFn := service.RunBackground(ctx, metricsServer)
@@ -197,6 +207,7 @@ func main() {
 	go func() {
 		if err := group.Wait(); err != nil {
 			log.Err(err).Msg("watcher service failed")
+			panic(err)
 		}
 	}()
 	app.Run("0.0.0.0:" + port)

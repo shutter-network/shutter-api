@@ -107,7 +107,7 @@ func (s *TestShutterService) SetupSuite() {
 	go func() {
 		s.Require().NoError(group.Wait())
 	}()
-	s.router = router.NewRouter(s.db, s.contract, s.ethClient, s.config)
+	s.router, _ = router.NewRouter(s.db, s.contract, s.ethClient, s.config)
 	s.testServer = httptest.NewServer(s.router)
 }
 

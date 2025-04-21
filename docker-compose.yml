@@ -27,6 +27,8 @@ services:
       METRICS_ENABLED:
       METRICS_HOST:
       METRICS_PORT:
+      DEFAULT_RATE_LIMIT:
+      REGISTER_IDENTITY_RATE_LIMIT:
     ports:
       - "8001:8001"
       - "23003:23003"

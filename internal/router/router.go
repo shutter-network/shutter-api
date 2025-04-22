@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/docs"
-	"github.com/shutter-network/shutter-api/internal/ipratelimiter.go"
+	"github.com/shutter-network/shutter-api/internal/ipratelimiter"
 	"github.com/shutter-network/shutter-api/internal/middleware"
 	"github.com/shutter-network/shutter-api/internal/service"
 	swaggerFiles "github.com/swaggo/files"

@@ -318,3 +318,74 @@ func TestMiddlewareWithInvalidContext(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+func TestDifferentEndpointLimits(t *testing.T) {
+	limiter := NewIPEndpointLimiter(100) // Default limit
+	ip := "127.0.0.1"
+
+	// Set up two endpoints with different limits
+	endpoint1 := "/endpoint1"
+	endpoint2 := "/endpoint2"
+	limiter.SetLimit(endpoint1, 2) // Small limit
+	limiter.SetLimit(endpoint2, 5) // Larger limit
+
+	// Test endpoint1 with small limit
+	assert.True(t, limiter.Allow(ip, endpoint1))  // First request
+	assert.True(t, limiter.Allow(ip, endpoint1))  // Second request
+	assert.False(t, limiter.Allow(ip, endpoint1)) // Should be blocked
+	assert.Equal(t, 2, limiter.GetCurrentUsage(ip, endpoint1))
+
+	// Test endpoint2 with larger limit
+	assert.True(t, limiter.Allow(ip, endpoint2))  // First request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Second request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Third request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Fourth request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Fifth request
+	assert.False(t, limiter.Allow(ip, endpoint2)) // Should be blocked
+	assert.Equal(t, 5, limiter.GetCurrentUsage(ip, endpoint2))
+}
+
+func TestEndpointLimitsIndependent(t *testing.T) {
+	limiter := NewIPEndpointLimiter(100) // Default limit
+	ip := "127.0.0.1"
+
+	// Set up two endpoints with different limits
+	endpoint1 := "/endpoint1"
+	endpoint2 := "/endpoint2"
+	limiter.SetLimit(endpoint1, 2) // Small limit
+	limiter.SetLimit(endpoint2, 5) // Larger limit
+
+	// Max out the larger limit endpoint first
+	for i := 0; i < 5; i++ {
+		assert.True(t, limiter.Allow(ip, endpoint2))
+	}
+	assert.False(t, limiter.Allow(ip, endpoint2)) // Should be blocked
+	assert.Equal(t, 5, limiter.GetCurrentUsage(ip, endpoint2))
+
+	// Verify smaller limit endpoint is still accessible
+	assert.True(t, limiter.Allow(ip, endpoint1))  // First request
+	assert.True(t, limiter.Allow(ip, endpoint1))  // Second request
+	assert.False(t, limiter.Allow(ip, endpoint1)) // Should be blocked
+	assert.Equal(t, 2, limiter.GetCurrentUsage(ip, endpoint1))
+
+	// Now max out the smaller limit endpoint
+	// Reset the test by creating a new limiter
+	limiter = NewIPEndpointLimiter(100)
+	limiter.SetLimit(endpoint1, 2)
+	limiter.SetLimit(endpoint2, 5)
+
+	// Max out the smaller limit endpoint
+	assert.True(t, limiter.Allow(ip, endpoint1))  // First request
+	assert.True(t, limiter.Allow(ip, endpoint1))  // Second request
+	assert.False(t, limiter.Allow(ip, endpoint1)) // Should be blocked
+	assert.Equal(t, 2, limiter.GetCurrentUsage(ip, endpoint1))
+
+	// Verify larger limit endpoint is still accessible
+	assert.True(t, limiter.Allow(ip, endpoint2))  // First request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Second request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Third request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Fourth request
+	assert.True(t, limiter.Allow(ip, endpoint2))  // Fifth request
+	assert.False(t, limiter.Allow(ip, endpoint2)) // Should be blocked
+	assert.Equal(t, 5, limiter.GetCurrentUsage(ip, endpoint2))
+}

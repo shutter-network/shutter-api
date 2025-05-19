@@ -39,9 +39,9 @@ def read_users() -> Dict[str, str]:
             }
         if "username" in users:
             users.pop("username")
-        if any(len(key) < 32 for key in users.values()):
+        if any(len(key) < 64 for key in users.values()):
             sys.exit(
-                f"Malformed keys: {list(filter(lambda _: len(_) < 32, users.values()))}"
+                f"Malformed keys: {list(filter(lambda _: len(_) < 64, users.values()))}"
             )
         return users
     except FileNotFoundError:

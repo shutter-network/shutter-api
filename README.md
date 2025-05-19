@@ -48,7 +48,7 @@ This documentation will guide you through:
 ## Prerequisites
 
 - **API Access**:
-  At the moment, the access is free of charge. You only need to query the API endpoints at the addresses below:
+  At the moment, the access is free of charge, but rate limited for Gnosis Mainnet. You only need to query the API endpoints at the addresses below:
   - **Chiado**: `https://shutter-api.chiado.staging.shutter.network/api/[ADD_ENDPOINT]`
   - **Mainnet**: `https://shutter-api.shutter.network/api/[ADD_ENDPOINT]`
 
@@ -59,6 +59,29 @@ This documentation will guide you through:
 - **Address of the API**:
   - **Chiado Address**: `0xb9C303443c9af84777e60D5C987AbF0c43844918`
   - **Gnosis Address**: `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`
+
+### Rate limits / Authorization
+
+For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip:
+
+  - `/register_identity` 5 requests per 24 hours
+  - `/get_data_for_encryption` 10 requests per 24 hours
+  - `/get_decryption_key` 20 requests per 24 hours
+  - `/decrypt_commitment` 10 requests per 24 hours
+
+We recommend using Chiado for development, because there are no rate limits in place.
+
+If you need higher limits, contact [loring@brainbot.com](mailto:loring@brainbot.com) to request an API key.
+
+Authorized requests have these limits:
+
+  - `/register_identity` 500 requests per 24 hours
+  - `/get_data_for_encryption` 1000 requests per 24 hours
+  - `/get_decryption_key` 2000 requests per 24 hours
+  - `/decrypt_commitment` 1000 requests per 24 hours
+
+Authorization is done by using an `Authorization: Bearer $API_KEY` header, when calling the API.
+
 ---
 
 ## Endpoints

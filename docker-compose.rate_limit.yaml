@@ -31,7 +31,7 @@ services:
       # Make sure to mount compiled 'apikeys' file to this path in caddy container:
       caddy.import: /etc/caddy/apikeys
       caddy.handle_errors: 429
-      caddy.handle_errors.respond: "`{\"error\": \"Request is rate limited. See documentation!\", \"retry_after_seconds\": {http.response.header.Retry-After}, \"status\": {err.status_code}}`"
+      caddy.handle_errors.respond: "`{\"error\": \"Request is rate limited. See documentation! https://github.com/shutter-network/shutter-api?tab=readme-ov-file#rate-limits--authorization\", \"retry_after_seconds\": {http.response.header.Retry-After}, \"status\": {err.status_code}}`"
       caddy.handle_errors.header.Content-type: "application/json"
 
       # Rate limits unauthorized

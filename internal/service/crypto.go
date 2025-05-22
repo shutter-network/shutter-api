@@ -36,14 +36,16 @@ func NewCryptoService(
 
 // GetDecryptionKey godoc
 //	@Summary		Get decryption key.
-//	@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on thier end.
+//	@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.  
 //	@Tags			Crypto
 //	@Produce		json
 //	@Param			identity	query		string								true	"Identity associated with the decryption key."
 //	@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
 //	@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
 //	@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
+//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //	@Failure		500			{object}	error.Http							"Internal server error."
+//  @Security		BearerAuth
 //	@Router			/get_decryption_key [get]
 
 func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
@@ -79,7 +81,9 @@ func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 //	@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
 //	@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
 //	@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
-//	@Failure		500				{object}	error.Http								"Internal server error."
+//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//	@Failure		500			{object}	error.Http							"Internal server error."
+//  @Security		BearerAuth
 //	@Router			/get_data_for_encryption [get]
 
 func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
@@ -120,7 +124,9 @@ func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 //	@Param			request	body		RegisterIdentityRequest				true	"Timestamp and Identity which client want to make the registration with."
 //	@Success		200		{object}	usecase.RegisterIdentityResponse	"Success."
 //	@Failure		400		{object}	error.Http							"Invalid Register identity request."
-//	@Failure		500		{object}	error.Http							"Internal server error."
+//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//	@Failure		500			{object}	error.Http							"Internal server error."
+//  @Security		BearerAuth
 //	@Router			/register_identity [post]
 
 func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
@@ -157,7 +163,9 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 //	@Param			encryptedCommitment	query		string		true	"Encrypted commitment is the clients encrypted message."
 //	@Success		200					{object}	[]byte		"Success."
 //	@Failure		400					{object}	error.Http	"Invalid Decrypt commitment request."
-//	@Failure		500					{object}	error.Http	"Internal server error."
+//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//	@Failure		500			{object}	error.Http							"Internal server error."
+//  @Security		BearerAuth
 //	@Router			/decrypt_commitment [get]
 
 func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {

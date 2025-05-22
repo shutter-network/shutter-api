@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/decrypt_commitment": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.",
                 "produces": [
                     "application/json"
@@ -57,6 +62,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/error.Http"
                         }
                     },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error.",
                         "schema": {
@@ -68,6 +79,11 @@ const docTemplate = `{
         },
         "/get_data_for_encryption": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves all the necessary data required by clients for encrypting any message.",
                 "produces": [
                     "application/json"
@@ -104,6 +120,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/error.Http"
                         }
                     },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error.",
                         "schema": {
@@ -115,7 +137,12 @@ const docTemplate = `{
         },
         "/get_decryption_key": {
             "get": {
-                "description": "Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on thier end.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.",
                 "produces": [
                     "application/json"
                 ],
@@ -151,6 +178,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/error.Http"
                         }
                     },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error.",
                         "schema": {
@@ -162,6 +195,11 @@ const docTemplate = `{
         },
         "/register_identity": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Allows clients to register an identity used for encryption and specify a release timestamp for the decryption key associated with the encrypted message.",
                 "produces": [
                     "application/json"
@@ -190,6 +228,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid Register identity request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -298,6 +342,14 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "(Optional): Type \"Bearer\" followed by a space and your API key.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

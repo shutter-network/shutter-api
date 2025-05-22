@@ -104,10 +104,16 @@ paths:
           description: Invalid Decrypt commitment request.
           schema:
             $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
       summary: Allows clients to decrypt their encrypted message.
       tags:
       - Crypto
@@ -142,10 +148,16 @@ paths:
           description: Invalid Get data for encryption request.
           schema:
             $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
       summary: Provides data necessary to allow encryption.
       tags:
       - Crypto
@@ -153,7 +165,7 @@ paths:
     get:
       description: Retrieves a decryption key for a given registered identity once
         the timestamp is reached. Decryption key is 0x padded, clients need to remove
-        the prefix when decrypting on thier end.
+        the prefix when decrypting on their end.
       parameters:
       - description: Identity associated with the decryption key.
         in: query
@@ -175,10 +187,16 @@ paths:
           description: Decryption key not found for the associated identity.
           schema:
             $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
       summary: Get decryption key.
       tags:
       - Crypto
@@ -206,11 +224,23 @@ paths:
           description: Invalid Register identity request.
           schema:
             $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
       summary: Allows clients to register any identity.
       tags:
       - Crypto
+securityDefinitions:
+  BearerAuth:
+    description: '(Optional): Type "Bearer" followed by a space and your API key.'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

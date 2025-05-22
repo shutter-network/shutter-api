@@ -28,6 +28,12 @@ import (
 
 // @title			Shutter API
 // @description	Shutter API is an encryption and decryption API that allows clients to register decryption triggers for specific encrypted messages. These triggers are invoked at a future time, eventually releasing the keys needed to decrypt the messages. Clients can specify the exact timestamp at which the trigger should release the decryption keys.
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description (Optional): Type "Bearer" followed by a space and your API key.
+
+
 func main() {
 	port := os.Getenv("SERVER_PORT")
 

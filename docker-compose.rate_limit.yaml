@@ -27,6 +27,14 @@ services:
     command: uv run --script /apikeys.py --compile
   shutter-api:
     labels:
+      # /check_authentication endpoint
+      caddy.@checkauth.path_0: "/check_authentication"
+      caddy.@checkauth.path_1: "/api/check_authentication"
+      caddy.handle: "@checkauth"
+      caddy.handle.handle_0: "@withApiKey"
+      caddy.handle.handle_0.respond: "`{\"result\": \"authenticated\"}`"
+      caddy.handle.handle_1: "@noApiKey"
+      caddy.handle.handle_1.respond: "`{\"result\": \"unauthenticated\"}`"
       ## Rate limiting:
       # Make sure to mount compiled 'apikeys' file to this path in caddy container:
       caddy.import: /etc/caddy/apikeys

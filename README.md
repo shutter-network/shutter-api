@@ -82,6 +82,8 @@ Authorized requests have these limits:
 
 Authorization is done by using an `Authorization: Bearer $API_KEY` header, when calling the API.
 
+Use the `/check_authentication` endpoint, to test your API key.
+
 ---
 
 ## Endpoints
@@ -92,7 +94,7 @@ To begin using the Shutter system, register an identity and specify a time-based
 
 Refer to the `/register_identity` endpoint in the Swagger documentation for details on parameters and responses.
 
-> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:  
+> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
 > [ShutterRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterRegistry.sol#L1C1-L86C2).
 
 #### Example Request
@@ -272,10 +274,10 @@ The decrypted message is returned in its hex format. To get the initial message,
 
 ## Future Features
 
-- **Event-Based and Block-Based Triggers**  
+- **Event-Based and Block-Based Triggers**
   Future versions of the Shutter system will support event-based and block-based decryption triggers for enhanced functionality.
 
-- **Real-Time Notifications**  
+- **Real-Time Notifications**
   Planned updates include WebSocket-based notifications for real-time key releases, improving user experience and interactivity.
 
 ## FAQs

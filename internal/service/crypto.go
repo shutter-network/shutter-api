@@ -36,7 +36,7 @@ func NewCryptoService(
 
 // GetDecryptionKey godoc
 //	@Summary		Get decryption key.
-//	@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.  
+//	@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.
 //	@Tags			Crypto
 //	@Produce		json
 //	@Param			identity	query		string								true	"Identity associated with the decryption key."

@@ -33,7 +33,6 @@ import (
 // @name Authorization
 // @description (Optional): Type "Bearer" followed by a space and your API key.
 
-
 func main() {
 	port := os.Getenv("SERVER_PORT")
 
@@ -60,7 +59,7 @@ func main() {
 
 	zerolog.SetGlobalLevel(level)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	dbURL := database.GetDBURL()
 	db, err := database.NewDB(ctx, dbURL)
 	if err != nil {
@@ -185,7 +184,7 @@ func main() {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
 	}
-	app := router.NewRouter(db, contract, client, config)
+	app := router.NewRouter(ctx, db, contract, client, config)
 	watcher := watcher.NewWatcher(config, db)
 	group, deferFn := service.RunBackground(ctx, watcher)
 	defer deferFn()
@@ -203,7 +202,13 @@ func main() {
 	go func() {
 		if err := group.Wait(); err != nil {
 			log.Err(err).Msg("watcher service failed")
+			cancel()
+			return
 		}
 	}()
-	app.Run("0.0.0.0:" + port)
+
+	// Run the server with context
+	if err := router.RunWithContext(ctx, cancel, app, "0.0.0.0:"+port); err != nil {
+		log.Err(err).Msg("server shutdown error")
+	}
 }

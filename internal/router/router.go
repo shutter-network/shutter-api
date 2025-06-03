@@ -1,6 +1,10 @@
 package router
 
 import (
+	"context"
+	"net/http"
+	"time"
+
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -14,6 +18,7 @@ import (
 )
 
 func NewRouter(
+	ctx context.Context,
 	db *pgxpool.Pool,
 	contract *common.Contract,
 	ethClient *ethclient.Client,
@@ -38,4 +43,31 @@ func NewRouter(
 		c.Title = "Shutter-API"
 	}))
 	return router
+}
+
+// RunWithContext starts the server and handles graceful shutdown when context is cancelled.
+func RunWithContext(ctx context.Context, cancel context.CancelFunc, router *gin.Engine, addr string) error {
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			cancel()
+		}
+	}()
+
+	// Wait for context cancellation
+	<-ctx.Done()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return err
+	}
+
+	return nil
 }

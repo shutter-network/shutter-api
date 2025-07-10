@@ -287,8 +287,8 @@ The keyper set is designed to handle downtime gracefully. Any missed decryption 
 ### How secure is the Shutter system?
 The Shutter system uses threshold encryption and distributed cryptographic operations to ensure that no single entity can compromise the security of commitments.
 
-### Why is my decryption key not released after timestamp has elaped?
-This is probably because the decryption timestamp is not according to block timestamp of Gnosis chain. We strictly follow Gnosis chain block time to release decryption keys i.e. ~ every 5 seconds.
+### Why is my decryption key not released after the given timestamp has elapsed?
+This is probably because the decryption timestamp is not aligned to a Gnosis Chain block timestamp. We strictly follow Gnosis Chain block timestamps to release decryption keys i.e. every 5 seconds. In this case simply try again a few seconds later. 
 
 ## Swagger Documentation
 

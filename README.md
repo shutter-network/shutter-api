@@ -94,7 +94,7 @@ Refer to the `/register_identity` endpoint in the Swagger documentation for deta
 
 > **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:  
 > [ShutterRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterRegistry.sol#L1C1-L86C2).
-> We follow Gnosis Mainnet block timestamps for `decryptionTimestamp`. The identities will be release on the basis of Gnosis Timestamp only (~every 5 seconds).
+> We follow Gnosis Mainnet block timestamps for `decryptionTimestamp`. The identities will be released on the basis of Gnosis Timestamp only (~every 5 seconds).
 
 #### Example Request
 ```bash

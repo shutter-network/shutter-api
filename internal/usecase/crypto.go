@@ -169,7 +169,7 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 		if err == pgx.ErrNoRows {
 			if registrationData.Timestamp%5 != 0 {
 				err := httpError.NewHttpError(
-					fmt.Sprintf("decryption will happen based on gnosis block time, please try again later after %d seconds", registrationData.Timestamp%5),
+					fmt.Sprintf("Timestamp not aligned with block time, decryption is processed based on Gnosis block time, please retry after %d seconds.", registrationData.Timestamp%5),
 					"",
 					http.StatusAccepted,
 				)

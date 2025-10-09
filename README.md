@@ -88,7 +88,7 @@ Use the `/check_authentication` endpoint, to test your API key.
 
 ## Endpoints
 
-### 1. Register an Identity with a Decryption Trigger
+### 1.A Register an Identity with Time-based Decryption Triggers
 
 To begin using the Shutter system, register an identity and specify a time-based decryption trigger. This step links an identity to a decryption key and sets the release conditions for the key to a Unix timestamp.
 
@@ -115,6 +115,45 @@ curl -X POST https://<API_BASE_URL>/register_identity \
   "identity": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75",
   "identity_prefix": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0",
   "tx_hash": "0x3026ad202ca611551377eef069fb6ed894eae65329ce73c56f300129694f12ba"
+}
+```
+
+### 1.B Register an Identity with Event-based Decryption Triggers [WIP]
+
+An alternative is the upcoming feature of "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However here the decryption key is produced only when a specific EVM event has been observed by the keypers.
+
+The trigger condition is specified by a `contract address` (mandatory), the event's `topic-0` (mandatory) and a number of additional topic- or data-matchers. Event data can be matched as `byte-equals` or numeric comparisons (`<, <=, ==, >=, >`) over an uint256-cast of the specified event data fields.
+
+Registered event based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if
+
+- the release condition has not been met before (since registration)
+- the `ttl` timer has not run out, and
+- *all* conditions of the trigger definition were fulfilled.
+
+
+> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
+> [ShutterEventRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
+
+#### Example Request
+```bash
+curl -X POST https://<API_BASE_URL>/register_event_identity \
+-H "Content-Type: application/json" \
+-d '{
+  "eventDefinition": "0x808ba62b3fb085eae2e58888828d5aa5d0d8d3cc44dcb1750e3664468a1288c38501d8d9e5d89930656b6ce9aa13b6a311031b89963b83d95588e26e5e8a9aeef2b9c1b07740d24bbd7aef9935fde194e05aff41fe6e3529de9a4b81779ddf4bed488b753efabe29aa7407bf131a7f744f2cf0429b0a200b1d369791fae3c740d62edd422b649a41660a6f0bd4310ecad617fb8ba626970934bd473c4dcc7784fac7ed66c4576590c76e70af4f3d99ea1361669349beb8cbb3346e9cc821435d",
+  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
+}'
+```
+
+> **Note**: The encoding of `eventDefinition` is specified [elsewhere](FIXME link missing). It is a concatenation of contract address, topic0 and the rlp encoding of the other conditions. Event definitions should be constructed by using provided tooling (WIP).
+
+#### Example Response
+```json
+{
+  "eon": 1,
+  "eon_key": "0x9348cbe5372c1b467bfe60d6c678bbe1aed74a90b93f857b2db1b6a5dac5cd95",
+  "identity": "0xdfb9b97b2ff057a1fdff173e10e974ffb16c28105f0524b33e8a6906c6c81dc0",
+  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c",
+  "tx_hash": "0xf7cb7ef13edee67735bba17d5ff84546a1ac7547b3d2a9f1d15e4d1b2e9f303c"
 }
 ```
 

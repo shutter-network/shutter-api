@@ -122,7 +122,7 @@ curl -X POST https://<API_BASE_URL>/register_identity \
 
 An alternative is the upcoming feature of "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However here the decryption key is produced only when a specific EVM event has been observed by the keypers.
 
-The trigger condition is specified by a `contract address` (mandatory), the event's `topic-0` (mandatory) and a number of additional topic- or data-matchers. Event data can be matched as `byte-equals` or numeric comparisons (`<, <=, ==, >=, >`) over an uint256-cast of the specified event data fields.
+The trigger condition is specified by a `contract address` (mandatory), and a number of topic- or data-matchers. Event data can be matched as `byte-equals` or numeric comparisons (`<, <=, ==, >=, >`) over an uint256-cast of the specified event data fields.
 
 Registered event based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if
 
@@ -144,7 +144,7 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
 }'
 ```
 
-> **Note**: The encoding of `eventDefinition` is specified [elsewhere](FIXME link missing). It is a concatenation of contract address, topic0 and the rlp encoding of the other conditions. Event definitions should be constructed by using provided tooling (WIP).
+> **Note**: The encoding of `eventDefinition` is specified in [rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/spec.md). It is a concatenation of contract address and the rlp encoding of all conditions. Event definitions should be constructed by using provided tooling (WIP).
 
 #### Example Response
 ```json

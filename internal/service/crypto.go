@@ -1,21 +1,45 @@
 package service
 
 import (
+	"encoding/hex"
+	"math/big"
 	"net/http"
+	"slices"
+	"strconv"
+	"strings"
 
+	sigparser "github.com/defiweb/go-sigparser"
+	ecommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"github.com/shutter-network/shutter-api/common"
-	"github.com/shutter-network/shutter-api/internal/error"
+	sherror "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/internal/usecase"
+
+	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
 )
 
 type RegisterIdentityRequest struct {
 	DecryptionTimestamp uint64 `json:"decryptionTimestamp" example:"1735044061"`
 	IdentityPrefix      string `json:"identityPrefix" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 } // @name RegisterIdentityRequest
+
+type EventArgument struct {
+	Name     string `json:"name" example:"amount"`
+	Operator string `json:"op" example:">="`
+	Value    string `json:"value" example:"25433"`
+}
+type EventTriggerDefinitionRequest struct {
+	ABI             string          `json:"eventABI" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+	ContractAddress ecommon.Address `json:"contract" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
+	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"operator\": \"==\", \"value\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
+}
+type EventTriggerDefinitionResponse struct {
+	EventTriggerDefinition string `json:"event_trigger_definition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+}
 
 type CryptoService struct {
 	CryptoUsecase *usecase.CryptoUsecase
@@ -51,7 +75,7 @@ func NewCryptoService(
 func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
-		err := error.NewHttpError(
+		err := sherror.NewHttpError(
 			"query parameter not found",
 			"identity query parameter is required",
 			http.StatusBadRequest,
@@ -89,7 +113,7 @@ func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 	address, ok := ctx.GetQuery("address")
 	if !ok {
-		err := error.NewHttpError(
+		err := sherror.NewHttpError(
 			"query parameter not found",
 			"address query parameter is required",
 			http.StatusBadRequest,
@@ -133,7 +157,7 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 	var req RegisterIdentityRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Err(err).Msg("err decoding request body")
-		err := error.NewHttpError(
+		err := sherror.NewHttpError(
 			"unable to decode request body",
 			"",
 			http.StatusBadRequest,
@@ -171,7 +195,7 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
-		err := error.NewHttpError(
+		err := sherror.NewHttpError(
 			"query parameter not found",
 			"identity query parameter is required",
 			http.StatusBadRequest,
@@ -182,7 +206,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 
 	encryptedCommitment, ok := ctx.GetQuery("encryptedCommitment")
 	if !ok {
-		err := error.NewHttpError(
+		err := sherror.NewHttpError(
 			"query parameter not found",
 			"encrypted commitment query parameter is required",
 			http.StatusBadRequest,
@@ -199,4 +223,142 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": data,
 	})
+}
+
+//	@BasePath	/api
+
+// EventTriggerDefinition godoc
+//	@Summary		Allows clients to compile an event trigger definition string.
+//	@Description	This endpoint takes an ABI snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.
+//	@Tags			Crypto
+//	@Produce		json
+//	@Param			request	body		EventDefinitionRequest				true	"Event ABI and operator-arguments tuples to match."
+//	@Success		200					{object}	[]byte		"Success."
+//	@Failure		400					{object}	error.Http	"Invalid Event Data."
+//	@Failure		429					{object}	error.Http							"Too many requests. Rate limited."
+//	@Failure		500					{object}	error.Http							"Internal server error."
+//  @Security		BearerAuth
+//	@Router			/event_trigger_definition [post]
+
+func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
+	CompileEventTriggerDefinition(ctx)
+}
+func CompileEventTriggerDefinition(ctx *gin.Context) {
+	var req EventTriggerDefinitionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Err(err).Msg("err decoding request body")
+		err := sherror.NewHttpError(
+			"unable to decode request body",
+			"",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+	predicates, err := logPredicates(req.Arguments, req.ABI)
+	if err != nil {
+		log.Err(err).Msg("error parsing event trigger definition")
+		err := sherror.NewHttpError(
+			"unable to parse event trigger definition",
+			"",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+	}
+	etd := shs.EventTriggerDefinition{
+		Contract:      req.ContractAddress,
+		LogPredicates: predicates,
+	}
+
+	u := shs.EventTriggerDefinition{}
+	u.UnmarshalBytes(etd.MarshalBytes())
+	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
+	ctx.JSON(http.StatusOK, data)
+}
+
+// aligns []byte to 32 byte
+func align(val []byte) []byte {
+	words := (31 + len(val)) / shs.Word
+	x := make([]byte, shs.Word*words)
+	copy(x, val)
+	return x
+}
+
+func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, error) {
+	lps := []shs.LogPredicate{}
+	sig, err := sigparser.ParseSignature(evtABI)
+	if err != nil {
+		return lps, err
+	}
+	indexedOffset := uint64(0)
+	nonIndexedOffset := uint64(4)
+	length := uint64(0)
+	for _, input := range sig.Inputs {
+		lp := shs.LogPredicate{}
+		i := slices.IndexFunc(
+			args,
+			func(ea EventArgument) bool {
+				return ea.Name == input.Name
+			})
+		// input is part of definition:
+		if i >= 0 {
+			arg := args[i]
+			// input is topic:
+			if input.Indexed {
+				val, err := hexutil.Decode(arg.Value)
+				if err != nil {
+					return lps, err
+				}
+				length = 1
+				lp.ValuePredicate.Op = shs.BytesEq
+				lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
+				lp.LogValueRef.Offset = indexedOffset
+				indexedOffset++
+				// input is data argument:
+			} else {
+				if input.Type != "uint256" {
+					val, err := hexutil.Decode(arg.Value)
+					if err != nil {
+						return lps, err
+					}
+
+					lp.ValuePredicate.Op = shs.BytesEq
+					lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
+					length = uint64(len([]byte(arg.Value)) / 32)
+				} else {
+					lp.ValuePredicate.Op = opFromString(arg.Operator)
+					value, err := strconv.Atoi(arg.Value)
+					if err != nil {
+						return lps, err
+					}
+					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(value))}
+					length = 1
+				}
+
+				lp.LogValueRef.Offset = nonIndexedOffset
+				nonIndexedOffset += length
+			}
+			lp.LogValueRef.Length = length
+			lps = append(lps, lp)
+		}
+	}
+	return lps, nil
+
+}
+
+func opFromString(op string) shs.Op {
+	switch strings.ToLower(op) {
+	case "lt":
+		return shs.UintLt
+	case "lte":
+		return shs.UintLte
+	case "eq":
+		return shs.UintEq
+	case "gt":
+		return shs.UintGt
+	case "gte":
+		return shs.UintGte
+	default:
+		return shs.BytesEq
+	}
 }

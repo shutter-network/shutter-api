@@ -1,0 +1,92 @@
+package service
+
+import (
+	"encoding/hex"
+	"encoding/json"
+	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+	"gotest.tools/assert"
+
+	"github.com/ethereum/go-ethereum/common"
+	hexutil "github.com/ethereum/go-ethereum/common/hexutil"
+	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
+)
+
+func setupRouter() *gin.Engine {
+	router := gin.Default()
+	router.POST("/test", CompileEventTriggerDefinition)
+	return router
+}
+func TestEventDecryptionValidation(t *testing.T) {
+	router := setupRouter()
+	testData := []string{
+		// "grom" != "from"
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "grom", "op": "eq", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "value": "1"}]}`,
+		// "op: gte" illegal on indexed address
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "gte", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "value": "1"}]}`,
+		// argument "from" defined more than once
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "from", "op": "eq", "value": "0x8e13976721ebff885611c8391d9b02749c1283fa"}]}`,
+		// invalid JSON
+		`{foo: "bar"}`,
+		// missing contract address
+		`{"eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "value": "1"}]}`,
+		// missing ABI
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "arguments": [{"name": "from", "op": "eq", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "value": "1"}]}`,
+	}
+	for _, bites := range testData {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/test", strings.NewReader(bites))
+		router.ServeHTTP(w, req)
+		assert.Check(t, w.Code != 200, "error returned 200")
+	}
+}
+
+func TestEventDecryptionData(t *testing.T) {
+	router := setupRouter()
+	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "value": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "value": "1"}]}`
+	w := httptest.NewRecorder()
+	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
+	assert.NilError(t, err, "hex decode failed")
+	g := shs.EventTriggerDefinition{
+		Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
+		LogPredicates: []shs.LogPredicate{
+			shs.LogPredicate{
+				LogValueRef: shs.LogValueRef{
+					Offset: 0,
+					Length: 1,
+				},
+				ValuePredicate: shs.ValuePredicate{
+					Op:       shs.BytesEq,
+					ByteArgs: [][]byte{align(fromAsBytes)},
+				},
+			},
+			shs.LogPredicate{
+				LogValueRef: shs.LogValueRef{
+					Offset: 4,
+					Length: 1,
+				},
+				ValuePredicate: shs.ValuePredicate{
+					Op:      shs.UintGte,
+					IntArgs: []*big.Int{big.NewInt(1)},
+				},
+			}},
+	}
+
+	etd := EventTriggerDefinitionResponse{
+		EventTriggerDefinition: hex.EncodeToString(g.MarshalBytes()),
+	}
+	expected, err := json.Marshal(etd)
+	assert.NilError(t, err, "error marshalling")
+
+	req, _ := http.NewRequest("POST", "/test", strings.NewReader(bites))
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	require.JSONEq(t, string(expected), w.Body.String(), "roundtrip failed")
+}

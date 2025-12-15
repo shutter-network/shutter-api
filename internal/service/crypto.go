@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"net/http"
 	"slices"
@@ -248,19 +249,39 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Err(err).Msg("err decoding request body")
 		err := sherror.NewHttpError(
-			"unable to decode request body",
-			"",
+			"unable to decode request body, JSON invalid",
+			err.Error(),
 			http.StatusBadRequest,
 		)
 		ctx.Error(err)
-		return
+	}
+	zeroAddress := ecommon.Address{}
+	if req.ContractAddress == zeroAddress {
+		err := fmt.Errorf("Contract address empty")
+		log.Err(err).Msg("error creating event trigger definition")
+		err = sherror.NewHttpError(
+			"unable to parse event trigger definition",
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+	}
+	if len(req.ABI) == 0 {
+		err := fmt.Errorf("No ABI given")
+		log.Err(err).Msg("error creating event trigger definition")
+		err = sherror.NewHttpError(
+			"unable to parse event trigger definition",
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
 	}
 	predicates, err := logPredicates(req.Arguments, req.ABI)
 	if err != nil {
 		log.Err(err).Msg("error parsing event trigger definition")
 		err := sherror.NewHttpError(
 			"unable to parse event trigger definition",
-			"",
+			err.Error(),
 			http.StatusBadRequest,
 		)
 		ctx.Error(err)
@@ -269,11 +290,25 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 		Contract:      req.ContractAddress,
 		LogPredicates: predicates,
 	}
+	err = etd.Validate()
+	if err != nil {
+		log.Err(err).Msg("error validating event trigger definition")
+		err := sherror.NewHttpError(
+			"event trigger definition invalid",
+			err.Error(),
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+	}
 
 	u := shs.EventTriggerDefinition{}
 	u.UnmarshalBytes(etd.MarshalBytes())
 	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
-	ctx.JSON(http.StatusOK, data)
+	if len(ctx.Errors) == 0 {
+		ctx.JSON(http.StatusOK, data)
+	} else {
+		ctx.JSON(http.StatusBadRequest, ctx.Errors.JSON())
+	}
 }
 
 // aligns []byte to 32 byte
@@ -293,6 +328,26 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 	indexedOffset := uint64(0)
 	nonIndexedOffset := uint64(4)
 	length := uint64(0)
+	argnames := make([]string, len(args))
+	for i, arg := range args {
+		found := slices.IndexFunc(
+			sig.Inputs,
+			func(par sigparser.Parameter) bool {
+				return par.Name == arg.Name
+			})
+		if found < 0 {
+			return lps, fmt.Errorf("argument '%v' not defined in ABI", arg.Name)
+		}
+		double := slices.IndexFunc(
+			argnames,
+			func(name string) bool {
+				return name == arg.Name
+			})
+		if double >= 0 {
+			return lps, fmt.Errorf("argument '%v' was defined more than once", arg.Name)
+		}
+		argnames[i] = arg.Name
+	}
 	for _, input := range sig.Inputs {
 		lp := shs.LogPredicate{}
 		i := slices.IndexFunc(
@@ -310,6 +365,9 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 					return lps, err
 				}
 				length = 1
+				if arg.Operator != "eq" {
+					return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
+				}
 				lp.ValuePredicate.Op = shs.BytesEq
 				lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
 				lp.LogValueRef.Offset = indexedOffset
@@ -321,7 +379,9 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 					if err != nil {
 						return lps, err
 					}
-
+					if arg.Operator != "eq" {
+						return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
+					}
 					lp.ValuePredicate.Op = shs.BytesEq
 					lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
 					length = uint64(len([]byte(arg.Value)) / 32)

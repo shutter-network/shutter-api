@@ -257,6 +257,19 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 		)
 		ctx.Error(err)
 	}
+	resp, errors := CompileEventTriggerDefinitionInternal(req)
+	if len(errors) > 0 {
+		for _, err := range errors {
+			ctx.Error(err)
+		}
+		ctx.JSON(http.StatusBadRequest, ctx.Errors.JSON())
+	} else {
+		ctx.JSON(http.StatusOK, resp)
+	}
+}
+
+func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
+	var errors []error
 	zeroAddress := ecommon.Address{}
 	if req.ContractAddress == zeroAddress {
 		err := fmt.Errorf("Contract address empty")
@@ -266,7 +279,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 			err.Error(),
 			http.StatusBadRequest,
 		)
-		ctx.Error(err)
+		errors = append(errors, err)
 	}
 	if len(req.ABI) == 0 {
 		err := fmt.Errorf("No ABI given")
@@ -276,7 +289,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 			err.Error(),
 			http.StatusBadRequest,
 		)
-		ctx.Error(err)
+		errors = append(errors, err)
 	}
 	predicates, err := logPredicates(req.Arguments, req.ABI)
 	if err != nil {
@@ -286,7 +299,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 			err.Error(),
 			http.StatusBadRequest,
 		)
-		ctx.Error(err)
+		errors = append(errors, err)
 	}
 	etd := shs.EventTriggerDefinition{
 		Contract:      req.ContractAddress,
@@ -300,15 +313,11 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 			err.Error(),
 			http.StatusBadRequest,
 		)
-		ctx.Error(err)
+		errors = append(errors, err)
 	}
 
 	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
-	if len(ctx.Errors) == 0 {
-		ctx.JSON(http.StatusOK, data)
-	} else {
-		ctx.JSON(http.StatusBadRequest, ctx.Errors.JSON())
-	}
+	return data, errors
 }
 
 // aligns []byte to 32 byte

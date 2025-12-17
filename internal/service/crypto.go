@@ -12,6 +12,7 @@ import (
 	sigparser "github.com/defiweb/go-sigparser"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -244,6 +245,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 	CompileEventTriggerDefinition(ctx)
 }
+
 func CompileEventTriggerDefinition(ctx *gin.Context) {
 	var req EventTriggerDefinitionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -301,8 +303,6 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 		ctx.Error(err)
 	}
 
-	u := shs.EventTriggerDefinition{}
-	u.UnmarshalBytes(etd.MarshalBytes())
 	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
 	if len(ctx.Errors) == 0 {
 		ctx.JSON(http.StatusOK, data)
@@ -319,13 +319,35 @@ func align(val []byte) []byte {
 	return x
 }
 
+func topic0(sig sigparser.Signature) shs.LogPredicate {
+	var b strings.Builder
+	b.WriteString(sig.Name)
+	b.WriteString("(")
+	for i, input := range sig.Inputs {
+		b.WriteString(input.Type)
+		if i < len(sig.Inputs)-1 {
+			b.WriteString(",")
+		}
+	}
+	b.WriteString(")")
+	lp := shs.LogPredicate{}
+	lp.LogValueRef.Length = 1
+	lp.LogValueRef.Offset = 0
+	h := crypto.Keccak256([]byte(b.String()))
+	lp.ValuePredicate.ByteArgs = [][]byte{h}
+	lp.ValuePredicate.Op = shs.BytesEq
+	return lp
+}
+
 func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, error) {
 	lps := []shs.LogPredicate{}
 	sig, err := sigparser.ParseSignature(evtABI)
 	if err != nil {
 		return lps, err
 	}
-	indexedOffset := uint64(0)
+	lp := topic0(sig)
+	lps = append(lps, lp)
+	indexedOffset := uint64(1)
 	nonIndexedOffset := uint64(4)
 	length := uint64(0)
 	argnames := make([]string, len(args))

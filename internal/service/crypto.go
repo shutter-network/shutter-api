@@ -315,7 +315,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 func align(val []byte) []byte {
 	words := (31 + len(val)) / shs.Word
 	x := make([]byte, shs.Word*words)
-	copy(x, val)
+	copy(x[len(x)-len(val):], val)
 	return x
 }
 

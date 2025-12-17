@@ -31,13 +31,13 @@ type RegisterIdentityRequest struct {
 
 type EventArgument struct {
 	Name     string `json:"name" example:"amount"`
-	Operator string `json:"op" example:">="`
+	Operator string `json:"op" example:"gte"`
 	Value    string `json:"value" example:"25433"`
 }
 type EventTriggerDefinitionRequest struct {
 	ABI             string          `json:"eventABI" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
 	ContractAddress ecommon.Address `json:"contract" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
-	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"operator\": \"==\", \"value\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
+	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"op\": \"eq\", \"value\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
 }
 type EventTriggerDefinitionResponse struct {
 	EventTriggerDefinition string `json:"event_trigger_definition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`

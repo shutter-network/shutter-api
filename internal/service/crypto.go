@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 
 	sigparser "github.com/defiweb/go-sigparser"
@@ -32,7 +31,8 @@ type RegisterIdentityRequest struct {
 type EventArgument struct {
 	Name     string `json:"name" example:"amount"`
 	Operator string `json:"op" example:"gte"`
-	Value    string `json:"value" example:"25433"`
+	Number   int    `json:"number" example:"25433"`
+	Bytes    string `json:"bytes" example:"0xabcdef01234567"`
 }
 type EventTriggerDefinitionRequest struct {
 	ABI             string          `json:"eventABI" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
@@ -391,7 +391,7 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 			arg := args[i]
 			// input is topic:
 			if input.Indexed {
-				val, err := hexutil.Decode(arg.Value)
+				val, err := hexutil.Decode(arg.Bytes)
 				if err != nil {
 					return lps, err
 				}
@@ -406,7 +406,7 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 				// input is data argument:
 			} else {
 				if input.Type != "uint256" {
-					val, err := hexutil.Decode(arg.Value)
+					val, err := hexutil.Decode(arg.Bytes)
 					if err != nil {
 						return lps, err
 					}
@@ -415,14 +415,10 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 					}
 					lp.ValuePredicate.Op = shs.BytesEq
 					lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
-					length = uint64(len([]byte(arg.Value)) / 32)
+					length = uint64(len([]byte(arg.Bytes)) / 32)
 				} else {
 					lp.ValuePredicate.Op = opFromString(arg.Operator)
-					value, err := strconv.Atoi(arg.Value)
-					if err != nil {
-						return lps, err
-					}
-					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(value))}
+					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(arg.Number))}
 					length = 1
 				}
 

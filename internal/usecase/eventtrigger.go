@@ -37,7 +37,7 @@ type EventTriggerDefinitionRequest struct {
 } // @name EventTriggerDefinitionRequest
 
 type EventTriggerDefinitionResponse struct {
-	EventTriggerDefinition string `json:"event_trigger_definition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+	EventTriggerDefinition string `json:"triggerDefinition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
 }
 
 func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
@@ -335,7 +335,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 
 	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)
 
-	// TODO: check for already registered
+	// TODO: check for already registered identities also against time based triggers!
 
 	publicAddress := crypto.PubkeyToAddress(*uc.config.PublicKey)
 

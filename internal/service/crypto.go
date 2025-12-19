@@ -18,7 +18,7 @@ type RegisterIdentityRequest struct {
 } // @name RegisterIdentityRequest
 
 type RegisterEventIdentityRequest struct {
-	EventTriggerDefinitionHex string `json:"event_trigger_definition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
+	EventTriggerDefinitionHex string `json:"triggerDefinition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 	IdentityPrefix            string `json:"identityPrefix" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 	Ttl                       uint64 `json:"ttl" example:"100"`
 } // @name RegisterEventIdentityRequest
@@ -230,7 +230,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //	@Failure		429					{object}	error.Http				"Too many requests. Rate limited."
 //	@Failure		500					{object}	error.Http				"Internal server error."
 //  @Security		BearerAuth
-//	@Router			/event_trigger_definition [post]
+//	@Router			/compile_event_trigger_definition [post]
 
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 	CompileEventTriggerDefinition(ctx)

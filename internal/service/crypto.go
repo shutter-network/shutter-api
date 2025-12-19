@@ -17,6 +17,12 @@ type RegisterIdentityRequest struct {
 	IdentityPrefix      string `json:"identityPrefix" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 } // @name RegisterIdentityRequest
 
+type RegisterEventIdentityRequest struct {
+	EventTriggerDefinitionHex string `json:"event_trigger_definition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
+	IdentityPrefix            string `json:"identityPrefix" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
+	Ttl                       uint64 `json:"ttl" example:"100"`
+} // @name RegisterEventIdentityRequest
+
 type CryptoService struct {
 	CryptoUsecase *usecase.CryptoUsecase
 }
@@ -215,6 +221,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //                  - "op": <one of: lt, lte, eq, gte, gt>,
 //                  - "number": <integer argument for numeric comparison>,
 //                  - "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
+//					Note: the resulting condition for the trigger is a logical AND of all arguments given.
 //	@Tags			Crypto
 //	@Produce		json
 //	@Param			request	body		EventTriggerDefinitionRequest		true		"Event signature and match arguments."
@@ -252,14 +259,13 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
-// TODO: FIXME!! doc string is just copy and paste
 // RegisterEventIdentity godoc
 //	@Summary		Allows clients to register an event trigger identity.
 //	@Description	Allows clients to register an identity used for encryption and event trigger definition for the decryption key associated with the encrypted message.
 //	@Tags			Crypto
 //	@Accepts		json
 //	@Produce		json
-//	@Param			request	body		RegisterEventRequest				true	"Timestamp and Identity which client want to make the registration with."
+//	@Param			request	body		RegisterEventIdentityRequest		true	"Event trigger definition, ttl and Identity which client want to make the registration with."
 //	@Success		200		{object}	usecase.RegisterEventResponse		"Success."
 //	@Failure		400		{object}	error.Http							"Invalid Register identity request."
 //	@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
@@ -268,4 +274,25 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 //	@Router			/register_event_identity [post]
 
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
+
+	var req RegisterEventIdentityRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Err(err).Msg("err decoding request body")
+		err := sherror.NewHttpError(
+			"unable to decode request body",
+			"",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	data, httpErr := svc.CryptoUsecase.RegisterEventIdentity(ctx, req.EventTriggerDefinitionHex, req.IdentityPrefix, req.Ttl)
+	if httpErr != nil {
+		ctx.Error(httpErr)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": data,
+	})
 }

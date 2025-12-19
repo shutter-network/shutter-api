@@ -12,6 +12,7 @@ Before running the tests, ensure that you have the following environment variabl
 - `RPC_URL` – The execution client RPC URL.
 - `TOTAL_BULK_REQUESTS` - Number of bulk requests for testing bulk decryption key requests
 - `SHUTTER_REGISTRY_CONTRACT_ADDRESS`
+- `SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS`
 - `KEY_BROADCAST_CONTRACT_ADDRESS`
 - `KEYPER_SET_MANAGER_CONTRACT_ADDRESS`
 - `P2P_BOOTSTRAP_ADDRESSES` - The addresses of the Keyper nodes to bootstrap the P2P network.

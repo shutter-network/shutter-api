@@ -89,13 +89,16 @@ func (s *TestShutterService) SetupSuite() {
 	shutterRegistryContractAddressStringified := os.Getenv("SHUTTER_REGISTRY_CONTRACT_ADDRESS")
 	shutterRegistryContractAddress := ethCommon.HexToAddress(shutterRegistryContractAddressStringified)
 
+	shutterEventRegistryContractAddressStringified := os.Getenv("SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS")
+	shutterEventRegistryContractAddress := ethCommon.HexToAddress(shutterEventRegistryContractAddressStringified)
+
 	keyBroadcastContractAddressStringified := os.Getenv("KEY_BROADCAST_CONTRACT_ADDRESS")
 	keyBroadcastContractAddress := ethCommon.HexToAddress(keyBroadcastContractAddressStringified)
 
 	keyperSetManagerContractAddressStringified := os.Getenv("KEYPER_SET_MANAGER_CONTRACT_ADDRESS")
 	keyperSetManagerContractAddress := ethCommon.HexToAddress(keyperSetManagerContractAddressStringified)
 
-	s.contract, err = common.NewContract(s.ethClient, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
+	s.contract, err = common.NewContract(s.ethClient, shutterRegistryContractAddress, shutterEventRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
 	s.Require().NoError(err)
 
 	migrationsPath := "../../migrations"

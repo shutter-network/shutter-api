@@ -40,6 +40,10 @@ type ShutterregistryInterface interface {
 	Register(opts *bind.TransactOpts, eon uint64, identityPrefix [32]byte, timestamp uint64) (*types.Transaction, error)
 }
 
+type ShutterEventregistryInterface interface {
+	Register(opts *bind.TransactOpts, eon uint64, identityPrefix [32]byte, triggerDefinition []byte, ttl uint64) (*types.Transaction, error)
+}
+
 type KeyperSetManagerInterface interface {
 	GetKeyperSetIndexByBlock(opts *bind.CallOpts, blockNumber uint64) (uint64, error)
 }
@@ -76,13 +80,14 @@ type RegisterIdentityResponse struct {
 } // @name RegisterIdentityResponse
 
 type CryptoUsecase struct {
-	db                       *pgxpool.Pool
-	dbQuery                  *data.Queries
-	shutterRegistryContract  ShutterregistryInterface
-	keyperSetManagerContract KeyperSetManagerInterface
-	keyBroadcastContract     KeyBroadcastInterface
-	ethClient                EthClientInterface
-	config                   *common.Config
+	db                           *pgxpool.Pool
+	dbQuery                      *data.Queries
+	shutterRegistryContract      ShutterregistryInterface
+	shutterEventRegistryContract ShutterEventregistryInterface
+	keyperSetManagerContract     KeyperSetManagerInterface
+	keyBroadcastContract         KeyBroadcastInterface
+	ethClient                    EthClientInterface
+	config                       *common.Config
 }
 
 func NewCryptoUsecase(

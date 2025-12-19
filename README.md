@@ -140,7 +140,8 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
 -H "Content-Type: application/json" \
 -d '{
   "eventDefinition": "0x808ba62b3fb085eae2e58888828d5aa5d0d8d3cc44dcb1750e3664468a1288c38501d8d9e5d89930656b6ce9aa13b6a311031b89963b83d95588e26e5e8a9aeef2b9c1b07740d24bbd7aef9935fde194e05aff41fe6e3529de9a4b81779ddf4bed488b753efabe29aa7407bf131a7f744f2cf0429b0a200b1d369791fae3c740d62edd422b649a41660a6f0bd4310ecad617fb8ba626970934bd473c4dcc7784fac7ed66c4576590c76e70af4f3d99ea1361669349beb8cbb3346e9cc821435d",
-  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
+  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c",
+  "ttl": 100
 }'
 ```
 

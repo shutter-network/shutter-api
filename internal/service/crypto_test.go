@@ -52,14 +52,14 @@ func TestEventDecryptionValidation(t *testing.T) {
 
 func TestEventDecryptionData(t *testing.T) {
 	router := setupRouter()
-	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`
+	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`
 	w := httptest.NewRecorder()
 	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
 	assert.NilError(t, err, "hex decode failed")
 	var req EventTriggerDefinitionRequest
 	err = json.NewDecoder(strings.NewReader(bites)).Decode(&req)
 	assert.NilError(t, err, "invalid json")
-	sig, err := sigparser.ParseSignature(req.ABI)
+	sig, err := sigparser.ParseSignature(req.EventSignature)
 	g := shs.EventTriggerDefinition{
 		Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
 		LogPredicates: []shs.LogPredicate{

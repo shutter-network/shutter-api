@@ -35,10 +35,11 @@ type EventArgument struct {
 	Bytes    string `json:"bytes" example:"0xabcdef01234567"`
 }
 type EventTriggerDefinitionRequest struct {
-	ABI             string          `json:"eventABI" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+	EventSignature  string          `json:"event_sig" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
 	ContractAddress ecommon.Address `json:"contract" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
 	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"op\": \"eq\", \"value\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
-}
+} // @name EventTriggerDefinitionRequest
+
 type EventTriggerDefinitionResponse struct {
 	EventTriggerDefinition string `json:"event_trigger_definition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
 }
@@ -231,14 +232,23 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 
 // EventTriggerDefinition godoc
 //	@Summary		Allows clients to compile an event trigger definition string.
-//	@Description	This endpoint takes an ABI snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.
+//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
+//                  supporting event based decryption triggers. The schema is:
+//					{"contract": <hex address of emitting contract>,
+//					"event_sig": <the event signature as defined in solidity: 'event <Name>(<type> [indexed] <argname>, ...)'>,
+//					"arguments": [<arguments matching parts of the event (see below)>]}
+//                  The object format for the "arguments" list is:
+//                  - "name": <matching argument name from signature>,
+//                  - "op": <one of: lt, lte, eq, gte, gt>,
+//                  - "number": <integer argument for numeric comparison>,
+//                  - "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
 //	@Tags			Crypto
 //	@Produce		json
-//	@Param			request	body		EventDefinitionRequest				true	"Event ABI and operator-arguments tuples to match."
-//	@Success		200					{object}	[]byte		"Success."
-//	@Failure		400					{object}	error.Http	"Invalid Event Data."
-//	@Failure		429					{object}	error.Http							"Too many requests. Rate limited."
-//	@Failure		500					{object}	error.Http							"Internal server error."
+//	@Param			request	body		EventTriggerDefinitionRequest		true		"Event signature and match arguments."
+//	@Success		200					{object}	[]byte					"Success."
+//	@Failure		400					{object}	error.Http				"Invalid Event Data."
+//	@Failure		429					{object}	error.Http				"Too many requests. Rate limited."
+//	@Failure		500					{object}	error.Http				"Internal server error."
 //  @Security		BearerAuth
 //	@Router			/event_trigger_definition [post]
 
@@ -281,8 +291,8 @@ func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (E
 		)
 		errors = append(errors, err)
 	}
-	if len(req.ABI) == 0 {
-		err := fmt.Errorf("No ABI given")
+	if len(req.EventSignature) == 0 {
+		err := fmt.Errorf("No event signature given")
 		log.Err(err).Msg("error creating event trigger definition")
 		err = sherror.NewHttpError(
 			"unable to parse event trigger definition",
@@ -291,7 +301,7 @@ func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (E
 		)
 		errors = append(errors, err)
 	}
-	predicates, err := logPredicates(req.Arguments, req.ABI)
+	predicates, err := logPredicates(req.Arguments, req.EventSignature)
 	if err != nil {
 		log.Err(err).Msg("error parsing event trigger definition")
 		err := sherror.NewHttpError(
@@ -348,9 +358,9 @@ func topic0(sig sigparser.Signature) shs.LogPredicate {
 	return lp
 }
 
-func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, error) {
+func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, error) {
 	lps := []shs.LogPredicate{}
-	sig, err := sigparser.ParseSignature(evtABI)
+	sig, err := sigparser.ParseSignature(evtSig)
 	if err != nil {
 		return lps, err
 	}
@@ -367,7 +377,7 @@ func logPredicates(args []EventArgument, evtABI string) ([]shs.LogPredicate, err
 				return par.Name == arg.Name
 			})
 		if found < 0 {
-			return lps, fmt.Errorf("argument '%v' not defined in ABI", arg.Name)
+			return lps, fmt.Errorf("argument '%v' not defined in signature", arg.Name)
 		}
 		double := slices.IndexFunc(
 			argnames,

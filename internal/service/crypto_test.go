@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	hexutil "github.com/ethereum/go-ethereum/common/hexutil"
 	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 )
 
 func setupRouter() *gin.Engine {
@@ -28,18 +29,18 @@ func TestEventDecryptionValidation(t *testing.T) {
 	router := setupRouter()
 	testData := []string{
 		// "grom" != "from"
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "grom", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "grom", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 		// "op": "gt" on "bytes" value (must be "number")
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, address notify)","arguments": [{"name": "notify", "op": "gt", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, address notify)","arguments": [{"name": "notify", "op": "gt", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"}]}`,
 		// "op: gte" illegal on indexed address
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "gte", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "gte", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 		// argument "from" defined more than once
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "from", "op": "eq", "value": "0x8e13976721ebff885611c8391d9b02749c1283fa"}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "from", "op": "eq", "value": "0x8e13976721ebff885611c8391d9b02749c1283fa"}]}`,
 		// invalid JSON
 		`{foo: "bar"}`,
 		// missing contract address
-		`{"eventABI":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
-		// missing ABI
+		`{"event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		// missing signature
 		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 	}
 	for _, bites := range testData {
@@ -56,14 +57,14 @@ func TestEventDecryptionData(t *testing.T) {
 	w := httptest.NewRecorder()
 	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
 	assert.NilError(t, err, "hex decode failed")
-	var req EventTriggerDefinitionRequest
+	var req usecase.EventTriggerDefinitionRequest
 	err = json.NewDecoder(strings.NewReader(bites)).Decode(&req)
 	assert.NilError(t, err, "invalid json")
 	sig, err := sigparser.ParseSignature(req.EventSignature)
 	g := shs.EventTriggerDefinition{
 		Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
 		LogPredicates: []shs.LogPredicate{
-			topic0(sig),
+			usecase.Topic0(sig),
 			shs.LogPredicate{
 				LogValueRef: shs.LogValueRef{
 					Offset: 1,
@@ -71,7 +72,7 @@ func TestEventDecryptionData(t *testing.T) {
 				},
 				ValuePredicate: shs.ValuePredicate{
 					Op:       shs.BytesEq,
-					ByteArgs: [][]byte{align(fromAsBytes)},
+					ByteArgs: [][]byte{usecase.Align(fromAsBytes)},
 				},
 			},
 			shs.LogPredicate{
@@ -86,7 +87,7 @@ func TestEventDecryptionData(t *testing.T) {
 			}},
 	}
 
-	etd := EventTriggerDefinitionResponse{
+	etd := usecase.EventTriggerDefinitionResponse{
 		EventTriggerDefinition: hex.EncodeToString(g.MarshalBytes()),
 	}
 	expected, err := json.Marshal(etd)

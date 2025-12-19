@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/shutter-network/shutter-api/internal/service"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 )
 
 // simple commandline compiler for EventTriggerDefinitions
@@ -18,15 +18,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	data, errors := service.CompileEventTriggerDefinitionInternal(req)
+	data, errors := usecase.CompileEventTriggerDefinitionInternal(req)
 	if len(errors) > 0 {
 		log.Fatal(errors)
 	}
 	fmt.Println(data.EventTriggerDefinition)
 }
 
-func IngestRequest() (service.EventTriggerDefinitionRequest, error) {
-	var record service.EventTriggerDefinitionRequest
+func IngestRequest() (usecase.EventTriggerDefinitionRequest, error) {
+	var record usecase.EventTriggerDefinitionRequest
 	err := json.NewDecoder(os.Stdin).Decode(&record)
 	return record, err
 }

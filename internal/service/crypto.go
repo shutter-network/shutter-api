@@ -1,17 +1,8 @@
 package service
 
 import (
-	"encoding/hex"
-	"fmt"
-	"math/big"
 	"net/http"
-	"slices"
-	"strings"
 
-	sigparser "github.com/defiweb/go-sigparser"
-	ecommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,30 +10,12 @@ import (
 	"github.com/shutter-network/shutter-api/common"
 	sherror "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/internal/usecase"
-
-	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
 )
 
 type RegisterIdentityRequest struct {
 	DecryptionTimestamp uint64 `json:"decryptionTimestamp" example:"1735044061"`
 	IdentityPrefix      string `json:"identityPrefix" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 } // @name RegisterIdentityRequest
-
-type EventArgument struct {
-	Name     string `json:"name" example:"amount"`
-	Operator string `json:"op" example:"gte"`
-	Number   int    `json:"number" example:"25433"`
-	Bytes    string `json:"bytes" example:"0xabcdef01234567"`
-}
-type EventTriggerDefinitionRequest struct {
-	EventSignature  string          `json:"event_sig" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
-	ContractAddress ecommon.Address `json:"contract" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
-	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"op\": \"eq\", \"value\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
-} // @name EventTriggerDefinitionRequest
-
-type EventTriggerDefinitionResponse struct {
-	EventTriggerDefinition string `json:"event_trigger_definition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
-}
 
 type CryptoService struct {
 	CryptoUsecase *usecase.CryptoUsecase
@@ -257,7 +230,7 @@ func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 }
 
 func CompileEventTriggerDefinition(ctx *gin.Context) {
-	var req EventTriggerDefinitionRequest
+	var req usecase.EventTriggerDefinitionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Err(err).Msg("err decoding request body")
 		err := sherror.NewHttpError(
@@ -267,7 +240,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 		)
 		ctx.Error(err)
 	}
-	resp, errors := CompileEventTriggerDefinitionInternal(req)
+	resp, errors := usecase.CompileEventTriggerDefinitionInternal(req)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			ctx.Error(err)
@@ -278,184 +251,21 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 	}
 }
 
-func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
-	var errors []error
-	zeroAddress := ecommon.Address{}
-	if req.ContractAddress == zeroAddress {
-		err := fmt.Errorf("Contract address empty")
-		log.Err(err).Msg("error creating event trigger definition")
-		err = sherror.NewHttpError(
-			"unable to parse event trigger definition",
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		errors = append(errors, err)
-	}
-	if len(req.EventSignature) == 0 {
-		err := fmt.Errorf("No event signature given")
-		log.Err(err).Msg("error creating event trigger definition")
-		err = sherror.NewHttpError(
-			"unable to parse event trigger definition",
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		errors = append(errors, err)
-	}
-	predicates, err := logPredicates(req.Arguments, req.EventSignature)
-	if err != nil {
-		log.Err(err).Msg("error parsing event trigger definition")
-		err := sherror.NewHttpError(
-			"unable to parse event trigger definition",
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		errors = append(errors, err)
-	}
-	etd := shs.EventTriggerDefinition{
-		Contract:      req.ContractAddress,
-		LogPredicates: predicates,
-	}
-	err = etd.Validate()
-	if err != nil {
-		log.Err(err).Msg("error validating event trigger definition")
-		err := sherror.NewHttpError(
-			"event trigger definition invalid",
-			err.Error(),
-			http.StatusBadRequest,
-		)
-		errors = append(errors, err)
-	}
+//	@BasePath	/api
+// TODO: FIXME!! doc string is just copy and paste
+// RegisterEventIdentity godoc
+//	@Summary		Allows clients to register an event trigger identity.
+//	@Description	Allows clients to register an identity used for encryption and event trigger definition for the decryption key associated with the encrypted message.
+//	@Tags			Crypto
+//	@Accepts		json
+//	@Produce		json
+//	@Param			request	body		RegisterEventRequest				true	"Timestamp and Identity which client want to make the registration with."
+//	@Success		200		{object}	usecase.RegisterEventResponse		"Success."
+//	@Failure		400		{object}	error.Http							"Invalid Register identity request."
+//	@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
+//	@Failure		500			{object}	error.Http						"Internal server error."
+//  @Security		BearerAuth
+//	@Router			/register_event_identity [post]
 
-	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
-	return data, errors
-}
-
-// aligns []byte to 32 byte
-func align(val []byte) []byte {
-	words := (31 + len(val)) / shs.Word
-	x := make([]byte, shs.Word*words)
-	copy(x[len(x)-len(val):], val)
-	return x
-}
-
-func topic0(sig sigparser.Signature) shs.LogPredicate {
-	var b strings.Builder
-	b.WriteString(sig.Name)
-	b.WriteString("(")
-	for i, input := range sig.Inputs {
-		b.WriteString(input.Type)
-		if i < len(sig.Inputs)-1 {
-			b.WriteString(",")
-		}
-	}
-	b.WriteString(")")
-	lp := shs.LogPredicate{}
-	lp.LogValueRef.Length = 1
-	lp.LogValueRef.Offset = 0
-	h := crypto.Keccak256([]byte(b.String()))
-	lp.ValuePredicate.ByteArgs = [][]byte{h}
-	lp.ValuePredicate.Op = shs.BytesEq
-	return lp
-}
-
-func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, error) {
-	lps := []shs.LogPredicate{}
-	sig, err := sigparser.ParseSignature(evtSig)
-	if err != nil {
-		return lps, err
-	}
-	lp := topic0(sig)
-	lps = append(lps, lp)
-	indexedOffset := uint64(1)
-	nonIndexedOffset := uint64(4)
-	length := uint64(0)
-	argnames := make([]string, len(args))
-	for i, arg := range args {
-		found := slices.IndexFunc(
-			sig.Inputs,
-			func(par sigparser.Parameter) bool {
-				return par.Name == arg.Name
-			})
-		if found < 0 {
-			return lps, fmt.Errorf("argument '%v' not defined in signature", arg.Name)
-		}
-		double := slices.IndexFunc(
-			argnames,
-			func(name string) bool {
-				return name == arg.Name
-			})
-		if double >= 0 {
-			return lps, fmt.Errorf("argument '%v' was defined more than once", arg.Name)
-		}
-		argnames[i] = arg.Name
-	}
-	for _, input := range sig.Inputs {
-		lp := shs.LogPredicate{}
-		i := slices.IndexFunc(
-			args,
-			func(ea EventArgument) bool {
-				return ea.Name == input.Name
-			})
-		// input is part of definition:
-		if i >= 0 {
-			arg := args[i]
-			// input is topic:
-			if input.Indexed {
-				val, err := hexutil.Decode(arg.Bytes)
-				if err != nil {
-					return lps, err
-				}
-				length = 1
-				if arg.Operator != "eq" {
-					return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
-				}
-				lp.ValuePredicate.Op = shs.BytesEq
-				lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
-				lp.LogValueRef.Offset = indexedOffset
-				indexedOffset++
-				// input is data argument:
-			} else {
-				if input.Type != "uint256" {
-					val, err := hexutil.Decode(arg.Bytes)
-					if err != nil {
-						return lps, err
-					}
-					if arg.Operator != "eq" {
-						return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
-					}
-					lp.ValuePredicate.Op = shs.BytesEq
-					lp.ValuePredicate.ByteArgs = [][]byte{align(val)}
-					length = uint64(len([]byte(arg.Bytes)) / 32)
-				} else {
-					lp.ValuePredicate.Op = opFromString(arg.Operator)
-					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(arg.Number))}
-					length = 1
-				}
-
-				lp.LogValueRef.Offset = nonIndexedOffset
-				nonIndexedOffset += length
-			}
-			lp.LogValueRef.Length = length
-			lps = append(lps, lp)
-		}
-	}
-	return lps, nil
-
-}
-
-func opFromString(op string) shs.Op {
-	switch strings.ToLower(op) {
-	case "lt":
-		return shs.UintLt
-	case "lte":
-		return shs.UintLte
-	case "eq":
-		return shs.UintEq
-	case "gt":
-		return shs.UintGt
-	case "gte":
-		return shs.UintGte
-	default:
-		return shs.BytesEq
-	}
+func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 }

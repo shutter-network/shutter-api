@@ -145,7 +145,7 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
 }'
 ```
 
-> **Note**: The encoding of `eventDefinition` is specified [in rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/event.md). It is a concatenation of contract address, topic0 and the rlp encoding of the other conditions. Event definitions should be constructed by using provided tooling (WIP).
+> **Note**: The encoding of `eventDefinition` is specified [in rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/event.md). It is a concatenation of contract address, topic0 and the rlp encoding of the other conditions. Event definitions can be constructed by using the `/compile_event_trigger_definition` endpoint (WIP: add link to swagger docs).
 
 #### Example Response
 ```json

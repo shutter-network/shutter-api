@@ -354,6 +354,11 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
+	// TODO: check contract address of eventTriggerDefinition against white list (if necessary)
+	// whitelist from ENV - if empty assert wildcard
+	// - parse event trigger definition with keyper side code from keyperimpl/shutterservice.EventTriggerDefinition
+	// - check event trigger definition "Contract" against whitelist
+
 	tx, err := uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")

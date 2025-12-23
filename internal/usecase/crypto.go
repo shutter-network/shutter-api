@@ -93,19 +93,21 @@ type CryptoUsecase struct {
 func NewCryptoUsecase(
 	db *pgxpool.Pool,
 	shutterRegistryContract ShutterregistryInterface,
+	shutterEventRegistryContract ShutterEventregistryInterface,
 	keyperSetManagerContract KeyperSetManagerInterface,
 	keyBroadcastContract KeyBroadcastInterface,
 	ethClient EthClientInterface,
 	config *common.Config,
 ) *CryptoUsecase {
 	return &CryptoUsecase{
-		db:                       db,
-		dbQuery:                  data.New(db),
-		shutterRegistryContract:  shutterRegistryContract,
-		keyperSetManagerContract: keyperSetManagerContract,
-		keyBroadcastContract:     keyBroadcastContract,
-		ethClient:                ethClient,
-		config:                   config,
+		db:                           db,
+		dbQuery:                      data.New(db),
+		shutterRegistryContract:      shutterRegistryContract,
+		shutterEventRegistryContract: shutterEventRegistryContract,
+		keyperSetManagerContract:     keyperSetManagerContract,
+		keyBroadcastContract:         keyBroadcastContract,
+		ethClient:                    ethClient,
+		config:                       config,
 	}
 }
 

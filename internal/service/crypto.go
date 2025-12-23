@@ -34,26 +34,26 @@ func NewCryptoService(
 	config *common.Config,
 ) *CryptoService {
 	return &CryptoService{
-		CryptoUsecase: usecase.NewCryptoUsecase(db, contract.ShutterRegistryContract, contract.KeyperSetManagerContract, contract.KeyBroadcastContract, ethClient, config),
+		CryptoUsecase: usecase.NewCryptoUsecase(db, contract.ShutterRegistryContract, contract.ShutterEventRegistryContract, contract.KeyperSetManagerContract, contract.KeyBroadcastContract, ethClient, config),
 	}
 }
 
 //	@BasePath	/api
-
+//
 // GetDecryptionKey godoc
-//	@Summary		Get decryption key.
-//	@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.
-//	@Tags			Crypto
-//	@Produce		json
-//	@Param			identity	query		string								true	"Identity associated with the decryption key."
-//	@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
-//	@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
-//	@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
-//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
-//	@Failure		500			{object}	error.Http							"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/get_decryption_key [get]
-
+//
+//		@Summary		Get decryption key.
+//		@Description	Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			identity	query		string								true	"Identity associated with the decryption key."
+//		@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
+//		@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
+//		@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/get_decryption_key [get]
 func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
@@ -77,21 +77,21 @@ func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
-
+//
 // GetDataForEncryption godoc
-//	@Summary		Provides data necessary to allow encryption.
-//	@Description	Retrieves all the necessary data required by clients for encrypting any message.
-//	@Tags			Crypto
-//	@Produce		json
-//	@Param			address			query		string									true	"Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
-//	@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
-//	@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
-//	@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
-//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
-//	@Failure		500			{object}	error.Http							"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/get_data_for_encryption [get]
-
+//
+//		@Summary		Provides data necessary to allow encryption.
+//		@Description	Retrieves all the necessary data required by clients for encrypting any message.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			address			query		string									true	"Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
+//		@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
+//		@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
+//		@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/get_data_for_encryption [get]
 func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 	address, ok := ctx.GetQuery("address")
 	if !ok {
@@ -120,21 +120,21 @@ func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
-
+//
 // RegisterIdentity godoc
-//	@Summary		Allows clients to register any identity.
-//	@Description	Allows clients to register an identity used for encryption and specify a release timestamp for the decryption key associated with the encrypted message.
-//	@Tags			Crypto
-//	@Accepts		json
-//	@Produce		json
-//	@Param			request	body		RegisterIdentityRequest				true	"Timestamp and Identity which client want to make the registration with."
-//	@Success		200		{object}	usecase.RegisterIdentityResponse	"Success."
-//	@Failure		400		{object}	error.Http							"Invalid Register identity request."
-//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
-//	@Failure		500			{object}	error.Http							"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/register_identity [post]
-
+//
+//		@Summary		Allows clients to register any identity.
+//		@Description	Allows clients to register an identity used for encryption and specify a release timestamp for the decryption key associated with the encrypted message.
+//		@Tags			Crypto
+//		@Accepts		json
+//		@Produce		json
+//		@Param			request	body		RegisterIdentityRequest				true	"Timestamp and Identity which client want to make the registration with."
+//		@Success		200		{object}	usecase.RegisterIdentityResponse	"Success."
+//		@Failure		400		{object}	error.Http							"Invalid Register identity request."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/register_identity [post]
 func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 	var req RegisterIdentityRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -159,21 +159,21 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
-
+//
 // DecryptCommitment godoc
-//	@Summary		Allows clients to decrypt their encrypted message.
-//	@Description	Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.
-//	@Tags			Crypto
-//	@Produce		json
-//	@Param			identity			query		string		true	"Identity used for registeration and encrypting the message."
-//	@Param			encryptedCommitment	query		string		true	"Encrypted commitment is the clients encrypted message."
-//	@Success		200					{object}	[]byte		"Success."
-//	@Failure		400					{object}	error.Http	"Invalid Decrypt commitment request."
-//	@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
-//	@Failure		500			{object}	error.Http							"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/decrypt_commitment [get]
-
+//
+//		@Summary		Allows clients to decrypt their encrypted message.
+//		@Description	Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			identity			query		string		true	"Identity used for registeration and encrypting the message."
+//		@Param			encryptedCommitment	query		string		true	"Encrypted commitment is the clients encrypted message."
+//		@Success		200					{object}	[]byte		"Success."
+//		@Failure		400					{object}	error.Http	"Invalid Decrypt commitment request."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/decrypt_commitment [get]
 func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
@@ -208,30 +208,36 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
-
-// EventTriggerDefinition godoc
-//	@Summary		Allows clients to compile an event trigger definition string.
-//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
-//                  supporting event based decryption triggers. The schema is:
-//					{"contract": <hex address of emitting contract>,
-//					"event_sig": <the event signature as defined in solidity: 'event <Name>(<type> [indexed] <argname>, ...)'>,
-//					"arguments": [<arguments matching parts of the event (see below)>]}
-//                  The object format for the "arguments" list is:
-//                  - "name": <matching argument name from signature>,
-//                  - "op": <one of: lt, lte, eq, gte, gt>,
-//                  - "number": <integer argument for numeric comparison>,
-//                  - "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
-//					Note: the resulting condition for the trigger is a logical AND of all arguments given.
-//	@Tags			Crypto
-//	@Produce		json
-//	@Param			request	body		EventTriggerDefinitionRequest		true		"Event signature and match arguments."
-//	@Success		200					{object}	[]byte					"Success."
-//	@Failure		400					{object}	error.Http				"Invalid Event Data."
-//	@Failure		429					{object}	error.Http				"Too many requests. Rate limited."
-//	@Failure		500					{object}	error.Http				"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/compile_event_trigger_definition [post]
-
+//
+// # EventTriggerDefinition godoc
+//
+//		@Summary		Allows clients to compile an event trigger definition string.
+//		@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
+//						supporting event based decryption triggers. Example request body:
+//						{
+//	  						"contract": "0x3465a347342B72BCf800aBf814324ba4a803c32b",
+//	  						"event_sig": "Transfer(indexed from address, indexed to address, amount uint256)",
+//	  						"arguments": [
+//	    							{ "name": "from", "op": "eq", "bytes": "0x456d9347342B72BCf800bBf117391ac2f807c6bF" },
+//	    							{ "name": "amount", "op": "gte", "number": 25433 }
+//	  							]
+//							}
+//						The object format for the "arguments" list is:
+//						- "name": <matching argument name from signature>
+//						- "op": <one of: lt, lte, eq, gte, gt>
+//						- "number": <integer argument for numeric comparison>
+//						- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
+//						Note: the resulting condition for the trigger is a logical AND of all arguments given.
+//
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			request	body		EventTriggerDefinitionRequest		true	"Event signature and match arguments."
+//		@Success		200		{object}	usecase.EventTriggerDefinitionResponse	"Success."
+//		@Failure		400		{object}	error.Http							"Invalid Event Data."
+//		@Failure		429		{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500		{object}	error.Http							"Internal server error."
+//		@Security		BearerAuth
+//		@Router			/compile_event_trigger_definition [post]
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 	CompileEventTriggerDefinition(ctx)
 }
@@ -259,20 +265,21 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 }
 
 //	@BasePath	/api
+//
 // RegisterEventIdentity godoc
-//	@Summary		Allows clients to register an event trigger identity.
-//	@Description	Allows clients to register an identity used for encryption and event trigger definition for the decryption key associated with the encrypted message.
-//	@Tags			Crypto
-//	@Accepts		json
-//	@Produce		json
-//	@Param			request	body		RegisterEventIdentityRequest		true	"Event trigger definition, ttl and Identity which client want to make the registration with."
-//	@Success		200		{object}	usecase.RegisterEventResponse		"Success."
-//	@Failure		400		{object}	error.Http							"Invalid Register identity request."
-//	@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
-//	@Failure		500			{object}	error.Http						"Internal server error."
-//  @Security		BearerAuth
-//	@Router			/register_event_identity [post]
-
+//
+//		@Summary		Allows clients to register an event trigger identity.
+//		@Description	Allows clients to register an identity used for encryption and event trigger definition for the decryption key associated with the encrypted message.
+//		@Tags			Crypto
+//		@Accepts		json
+//		@Produce		json
+//		@Param			request	body		RegisterEventIdentityRequest		true	"Event trigger definition, ttl and Identity which client want to make the registration with."
+//		@Success		200		{object}	usecase.RegisterIdentityResponse		"Success."
+//		@Failure		400		{object}	error.Http							"Invalid Register identity request."
+//		@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http						"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/register_event_identity [post]
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 
 	var req RegisterEventIdentityRequest

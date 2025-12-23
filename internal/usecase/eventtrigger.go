@@ -32,12 +32,12 @@ type EventArgument struct {
 }
 type EventTriggerDefinitionRequest struct {
 	EventSignature  string          `json:"event_sig" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
-	ContractAddress ecommon.Address `json:"contract" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
-	Arguments       []EventArgument `json:"arguments" example:"[{\"name\": \"from\", \"op\": \"eq\", \"bytes\": \"0x456d9347342B72BCf800bBf117391ac2f807c6bF\"}]"`
+	ContractAddress ecommon.Address `json:"contract" swaggertype:"string" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
+	Arguments       []EventArgument `json:"arguments"`
 } // @name EventTriggerDefinitionRequest
 
 type EventTriggerDefinitionResponse struct {
-	EventTriggerDefinition string `json:"triggerDefinition" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+	EventTriggerDefinition string `json:"triggerDefinition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 }
 
 func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
@@ -88,7 +88,7 @@ func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (E
 		errors = append(errors, err)
 	}
 
-	data := EventTriggerDefinitionResponse{EventTriggerDefinition: hex.EncodeToString(etd.MarshalBytes())}
+	data := EventTriggerDefinitionResponse{EventTriggerDefinition: common.PrefixWith0x(hex.EncodeToString(etd.MarshalBytes()))}
 	return data, errors
 }
 
@@ -322,6 +322,49 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
+	eventTriggerDefinition, err := hexutil.Decode(eventTriggerDefinitionHex)
+	if err != nil {
+		err := httpError.NewHttpError(
+			"could not decode event trigger definition",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	etd := shs.EventTriggerDefinition{}
+	if err := etd.UnmarshalBytes(eventTriggerDefinition); err != nil {
+		log.Err(err).Msg("err encountered while unmarshaling event trigger definition")
+		err := httpError.NewHttpError(
+			"could not parse event trigger definition",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	// Check whitelist if it's configured
+	if len(uc.config.WhitelistedContractAddresses) > 0 {
+		isWhitelisted := false
+		for _, whitelistedAddr := range uc.config.WhitelistedContractAddresses {
+			if etd.Contract == whitelistedAddr {
+				isWhitelisted = true
+				break
+			}
+		}
+		if !isWhitelisted {
+			log.Warn().
+				Str("contract_address", etd.Contract.Hex()).
+				Msg("contract address is not whitelisted")
+			err := httpError.NewHttpError(
+				"contract address is not whitelisted",
+				fmt.Sprintf("contract address %s is not in the whitelist", etd.Contract.Hex()),
+				http.StatusForbidden,
+			)
+			return nil, &err
+		}
+	}
+
 	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainId)
 	if err != nil {
 		log.Err(err).Msg("err encountered while creating signer")
@@ -333,7 +376,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
-	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)
+	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinition)
 
 	// TODO: check for already registered identities also against time based triggers!
 
@@ -343,21 +386,6 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		From:   publicAddress,
 		Signer: newSigner.Signer,
 	}
-
-	eventTriggerDefinition, err := hexutil.Decode(eventTriggerDefinitionHex)
-	if err != nil {
-		err := httpError.NewHttpError(
-			"could not decode event trigger definition",
-			"",
-			http.StatusBadRequest,
-		)
-		return nil, &err
-	}
-
-	// TODO: check contract address of eventTriggerDefinition against white list (if necessary)
-	// whitelist from ENV - if empty assert wildcard
-	// - parse event trigger definition with keyper side code from keyperimpl/shutterservice.EventTriggerDefinition
-	// - check event trigger definition "Contract" against whitelist
 
 	tx, err := uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
 	if err != nil {

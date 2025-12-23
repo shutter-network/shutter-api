@@ -39,6 +39,7 @@ func NewRouter(
 		api.POST("/register_identity", cryptoService.RegisterIdentity)
 		api.POST("/compile_event_trigger_definition", cryptoService.CompileEventTriggerDefinition)
 		api.GET("/decrypt_commitment", cryptoService.DecryptCommitment)
+		api.POST("/register_event_identity", cryptoService.RegisterEventIdentity)
 	}
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, func(c *ginSwagger.Config) {
 		c.Title = "Shutter-API"

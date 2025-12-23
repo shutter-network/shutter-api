@@ -79,7 +79,7 @@ func (s *TestShutterService) SetupSuite() {
 	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
-	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
+	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig, []ethCommon.Address{})
 	s.Require().NoError(err)
 
 	rpc_url := os.Getenv("RPC_URL")

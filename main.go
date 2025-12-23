@@ -115,7 +115,7 @@ func main() {
 	shutterRegistryContractAddressStringified := os.Getenv("SHUTTER_REGISTRY_CONTRACT_ADDRESS")
 	shutterRegistryContractAddress := common.HexToAddress(shutterRegistryContractAddressStringified)
 
-	shutterEventRegistryContractAddressStringified := os.Getenv("SHUTTER_EVENT+REGISTRY_CONTRACT_ADDRESS")
+	shutterEventRegistryContractAddressStringified := os.Getenv("SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS")
 	shutterEventRegistryContractAddress := common.HexToAddress(shutterEventRegistryContractAddressStringified)
 
 	keyBroadcastContractAddressStringified := os.Getenv("KEY_BROADCAST_CONTRACT_ADDRESS")
@@ -182,7 +182,19 @@ func main() {
 	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
-	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
+	var whitelistedContractAddresses []common.Address
+	whitelistedAddressesStr := os.Getenv("WHITELISTED_TRIGGER_CONTRACT_ADDRESSES")
+	if whitelistedAddressesStr != "" {
+		addressStrings := strings.Split(whitelistedAddressesStr, ",")
+		for _, addrStr := range addressStrings {
+			addrStr = strings.TrimSpace(addrStr)
+			if addrStr != "" {
+				whitelistedContractAddresses = append(whitelistedContractAddresses, common.HexToAddress(addrStr))
+			}
+		}
+	}
+
+	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig, whitelistedContractAddresses)
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return

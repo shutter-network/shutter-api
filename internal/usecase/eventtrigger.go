@@ -15,9 +15,12 @@ import (
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rs/zerolog/log"
 	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
 	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
 	httpError "github.com/shutter-network/shutter-api/internal/error"
 	sherror "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/metrics"
@@ -39,6 +42,10 @@ type EventTriggerDefinitionRequest struct {
 type EventTriggerDefinitionResponse struct {
 	EventTriggerDefinition string `json:"triggerDefinition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 }
+
+type GetEventIdentityRegistrationTTLResponse struct {
+	TTL uint64 `json:"ttl" example:"100"`
+} // @name GetEventIdentityRegistrationTTL
 
 func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
 	var errors []error
@@ -378,7 +385,28 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 
 	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinition)
 
-	// TODO: check for already registered identities also against time based triggers!
+	_, err = uc.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
+		Eon:      int64(eon),
+		Identity: identity,
+	})
+	if err == nil {
+		log.Warn().Msg("event identity already registered")
+		err := httpError.NewHttpError(
+			"event identity already registered",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	} else if err != pgx.ErrNoRows {
+		// Unexpected database error
+		log.Err(err).Msg("err encountered while querying event identity registration")
+		err := httpError.NewHttpError(
+			"error encountered while checking event identity registration",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &err
+	}
 
 	publicAddress := crypto.PubkeyToAddress(*uc.config.PublicKey)
 
@@ -402,6 +430,23 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	// we return the transaction hash in response to allow
 	// users the ability to monitor it themselves
 
+	// Store the registration in database
+	txHashBytes := tx.Hash().Bytes()
+	err = uc.dbQuery.InsertEventIdentityRegistration(ctx, data.InsertEventIdentityRegistrationParams{
+		Eon:                    int64(eon),
+		Identity:               identity,
+		IdentityPrefix:         identityPrefix[:],
+		EonKey:                 eonKeyBytes,
+		EventTriggerDefinition: eventTriggerDefinition,
+		Ttl:                    pgtype.Int8{Int64: int64(ttl), Valid: true},
+		TxHash:                 txHashBytes,
+	})
+	if err != nil {
+		log.Err(err).Msg("err encountered while storing event identity registration")
+		// Note: Transaction already sent, so we log the error but don't fail the request
+		// The registration is on-chain even if DB insert fails
+	}
+
 	metrics.TotalSuccessfulIdentityRegistration.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
@@ -411,4 +456,64 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		TxHash:         tx.Hash().Hex(),
 	}, nil
 
+}
+
+func (uc *CryptoUsecase) GetEventIdentityRegistrationTTL(ctx context.Context, eon uint64, identity string) (*GetEventIdentityRegistrationTTLResponse, *httpError.Http) {
+	identityBytes, err := hex.DecodeString(strings.TrimPrefix(identity, "0x"))
+	if err != nil {
+		log.Err(err).Msg("err encountered while decoding identity")
+		err := httpError.NewHttpError(
+			"error encountered while decoding identity",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	if len(identityBytes) != 32 {
+		log.Err(err).Msg("identity should be of length 32")
+		err := httpError.NewHttpError(
+			"identity should be of length 32",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	ttl, err := uc.dbQuery.GetEventIdentityRegistrationTTL(ctx, data.GetEventIdentityRegistrationTTLParams{
+		Eon:      int64(eon),
+		Identity: identityBytes,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			log.Debug().Uint64("eon", eon).Str("identity", identity).Msg("event identity registration not found")
+			err := httpError.NewHttpError(
+				"event identity registration not found",
+				"",
+				http.StatusNotFound,
+			)
+			return nil, &err
+		}
+		log.Err(err).Msg("err encountered while querying event identity registration TTL")
+		err := httpError.NewHttpError(
+			"error encountered while querying event identity registration TTL",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &err
+	}
+
+	if !ttl.Valid {
+		log.Warn().Uint64("eon", eon).Str("identity", identity).Msg("ttl is null for event identity registration")
+		err := httpError.NewHttpError(
+			"ttl not set for event identity registration",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	return &GetEventIdentityRegistrationTTLResponse{
+		TTL: uint64(ttl.Int64),
+	}, nil
 }

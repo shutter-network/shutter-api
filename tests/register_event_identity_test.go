@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/shutter-network/shutter-api/common"
+	"github.com/shutter-network/shutter-api/internal/data"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -61,14 +62,29 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 		Return(randomTx, nil).
 		Once()
 
-	data, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
+	response, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().Nil(err)
 
-	s.Require().Equal(data.Eon, eon)
-	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), data.Identity)
-	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identityPrefix)), data.IdentityPrefix)
-	s.Require().Equal(data.EonKey, common.PrefixWith0x(hex.EncodeToString(eonPublicKey.Marshal())))
-	s.Require().Equal(randomTx.Hash().Hex(), data.TxHash)
+	s.Require().Equal(response.Eon, eon)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), response.Identity)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identityPrefix)), response.IdentityPrefix)
+	s.Require().Equal(response.EonKey, common.PrefixWith0x(hex.EncodeToString(eonPublicKey.Marshal())))
+	s.Require().Equal(randomTx.Hash().Hex(), response.TxHash)
+
+	// Verify the registration was stored in the database
+	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
+		Eon:      int64(eon),
+		Identity: identity,
+	})
+	s.Require().NoError(dbErr)
+	s.Require().Equal(int64(eon), dbRegistration.Eon)
+	s.Require().Equal(identity, dbRegistration.Identity)
+	s.Require().Equal(identityPrefix, dbRegistration.IdentityPrefix)
+	s.Require().Equal(eonPublicKey.Marshal(), dbRegistration.EonKey)
+	s.Require().Equal(eventTriggerDefinitionBytes, dbRegistration.EventTriggerDefinition)
+	s.Require().True(dbRegistration.Ttl.Valid)
+	s.Require().Equal(int64(ttl), dbRegistration.Ttl.Int64)
+	s.Require().Equal(randomTx.Hash().Bytes(), dbRegistration.TxHash)
 }
 
 func (s *TestShutterService) TestRegisterEventIdentity_InvalidIdentityPrefix() {
@@ -295,4 +311,97 @@ func (s *TestShutterService) TestRegisterEventIdentity_EmptyIdentityPrefix() {
 	s.Require().NotEqual(data.Identity, "")
 	s.Require().Equal(data.EonKey, common.PrefixWith0x(hex.EncodeToString(eonPublicKey.Marshal())))
 	s.Require().Equal(randomTx.Hash().Hex(), data.TxHash)
+}
+
+func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
+	ctx := context.Background()
+	ttl := uint64(100)
+	identityPrefix, err := generateRandomBytes(32)
+	s.Require().NoError(err)
+	identityPrefixStringified := hex.EncodeToString(identityPrefix)
+	blockNumber := rand.Uint64()
+
+	eon := rand.Uint64()
+
+	// Hardcoded valid event trigger definition
+	eventTriggerDefinitionHex := "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+	eventTriggerDefinitionBytes, err := hexutil.Decode(eventTriggerDefinitionHex)
+	s.Require().NoError(err)
+
+	newSigner, err := bind.NewKeyedTransactorWithChainID(s.config.SigningKey, big.NewInt(GnosisMainnetChainID))
+	s.Require().NoError(err)
+
+	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinitionBytes)
+
+	eonPublicKey, _, _ := s.makeKeys(identity)
+
+	randomTx := generateRandomTransaction()
+
+	// First registration - set up mocks
+	s.ethClient.
+		On("BlockNumber", ctx).
+		Return(blockNumber, nil).
+		Once()
+
+	s.keyperSetManagerContract.
+		On("GetKeyperSetIndexByBlock", nil, blockNumber).
+		Return(eon, nil).
+		Once()
+
+	s.keyBroadcastContract.
+		On("GetEonKey", nil, eon).
+		Return(eonPublicKey.Marshal(), nil).
+		Once()
+
+	s.ethClient.
+		On("ChainID", ctx).
+		Return(big.NewInt(GnosisMainnetChainID), nil).
+		Once()
+
+	s.shutterEventRegistryContract.
+		On("Register", mock.Anything, eon, [32]byte(identityPrefix), eventTriggerDefinitionBytes, ttl).
+		Return(randomTx, nil).
+		Once()
+
+	// First registration should succeed
+	response, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
+	s.Require().Nil(err)
+	s.Require().Equal(response.Eon, eon)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), response.Identity)
+
+	// Verify the registration was stored in the database
+	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
+		Eon:      int64(eon),
+		Identity: identity,
+	})
+	s.Require().NoError(dbErr)
+	s.Require().Equal(int64(eon), dbRegistration.Eon)
+	s.Require().Equal(identity, dbRegistration.Identity)
+
+	// Second registration attempt - set up mocks again
+	s.ethClient.
+		On("BlockNumber", ctx).
+		Return(blockNumber, nil).
+		Once()
+
+	s.keyperSetManagerContract.
+		On("GetKeyperSetIndexByBlock", nil, blockNumber).
+		Return(eon, nil).
+		Once()
+
+	s.keyBroadcastContract.
+		On("GetEonKey", nil, eon).
+		Return(eonPublicKey.Marshal(), nil).
+		Once()
+
+	s.ethClient.
+		On("ChainID", ctx).
+		Return(big.NewInt(GnosisMainnetChainID), nil).
+		Once()
+
+	// Second registration should fail with "event identity already registered"
+	_, httpErr := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
+	s.Require().NotNil(httpErr)
+	s.Require().Equal("event identity already registered", httpErr.Description)
+	s.Require().Equal(400, httpErr.StatusCode)
 }

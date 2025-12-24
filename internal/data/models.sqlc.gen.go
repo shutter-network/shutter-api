@@ -4,10 +4,23 @@
 
 package data
 
-import ()
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 type DecryptionKey struct {
 	Eon           int64
 	EpochID       []byte
 	DecryptionKey []byte
+}
+
+type EventIdentityRegistration struct {
+	Eon                    int64
+	Identity               []byte
+	IdentityPrefix         []byte
+	EonKey                 []byte
+	EventTriggerDefinition []byte
+	Ttl                    pgtype.Int8
+	TxHash                 []byte
+	CreatedAt              pgtype.Timestamp
 }

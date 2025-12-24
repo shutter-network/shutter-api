@@ -2,6 +2,7 @@ package service
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
@@ -81,11 +82,12 @@ func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 // GetDataForEncryption godoc
 //
 //		@Summary		Provides data necessary to allow encryption.
-//		@Description	Retrieves all the necessary data required by clients for encrypting any message.
+//		@Description	Retrieves all the necessary data required by clients for encrypting any message. Supports both time-based and event-based identity computation. If triggerDefinition is provided, the identity will be computed for event-based triggers. Otherwise, it uses time-based identity computation.
 //		@Tags			Crypto
 //		@Produce		json
 //		@Param			address			query		string									true	"Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
 //		@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
+//		@Param			triggerDefinition	query		string									false	"Optional event trigger definition (hex-encoded with 0x prefix). If provided, identity will be computed for event-based triggers. This parameter is strictly for event-based triggers."
 //		@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
 //		@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
@@ -109,7 +111,12 @@ func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 		identityPrefix = ""
 	}
 
-	data, httpErr := svc.CryptoUsecase.GetDataForEncryption(ctx, address, identityPrefix)
+	triggerDefinition, ok := ctx.GetQuery("triggerDefinition")
+	if !ok {
+		triggerDefinition = ""
+	}
+
+	data, httpErr := svc.CryptoUsecase.GetDataForEncryption(ctx, address, identityPrefix, triggerDefinition)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return
@@ -295,6 +302,67 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 	}
 
 	data, httpErr := svc.CryptoUsecase.RegisterEventIdentity(ctx, req.EventTriggerDefinitionHex, req.IdentityPrefix, req.Ttl)
+	if httpErr != nil {
+		ctx.Error(httpErr)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": data,
+	})
+}
+
+//	@BasePath	/api
+//
+// GetEventIdentityRegistrationTTL godoc
+//
+//		@Summary		Get event identity registration TTL.
+//		@Description	Retrieves the time-to-live (TTL) for a given event identity registration.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			eon		query		uint64									true	"Eon number associated with the event identity registration."
+//		@Param			identity	query		string									true	"Identity associated with the event identity registration."
+//		@Success		200		{object}	usecase.GetEventIdentityRegistrationTTLResponse	"Success."
+//		@Failure		400		{object}	error.Http								"Invalid Get event identity registration TTL request."
+//		@Failure		404		{object}	error.Http								"Event identity registration not found."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/get_event_trigger_ttl [get]
+func (svc *CryptoService) GetEventIdentityRegistrationTTL(ctx *gin.Context) {
+	eonStr, ok := ctx.GetQuery("eon")
+	if !ok {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"eon query parameter is required",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	eon, err := strconv.ParseUint(eonStr, 10, 64)
+	if err != nil {
+		err := sherror.NewHttpError(
+			"invalid eon parameter",
+			"eon must be a valid unsigned integer",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	identity, ok := ctx.GetQuery("identity")
+	if !ok {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"identity query parameter is required",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	data, httpErr := svc.CryptoUsecase.GetEventIdentityRegistrationTTL(ctx, eon, identity)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return

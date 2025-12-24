@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
@@ -217,7 +218,7 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 	}, nil
 }
 
-func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address string, identityPrefixStringified string) (*GetDataForEncryptionResponse, *httpError.Http) {
+func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address string, identityPrefixStringified string, triggerDefinitionHex string) (*GetDataForEncryptionResponse, *httpError.Http) {
 	if !ethCommon.IsHexAddress(address) {
 		log.Warn().Str("address", address).Msg("invalid address")
 		err := httpError.NewHttpError(
@@ -313,7 +314,24 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 		return nil, &err
 	}
 
-	identity := common.ComputeIdentity(identityPrefix[:], ethCommon.HexToAddress(address))
+	var identity []byte
+	if len(triggerDefinitionHex) > 0 {
+		// Event-based identity computation: hash(prefix + sender + triggerDefinition)
+		triggerDefinitionBytes, err := hexutil.Decode(triggerDefinitionHex)
+		if err != nil {
+			log.Err(err).Msg("err encountered while decoding trigger definition")
+			err := httpError.NewHttpError(
+				"error encountered while decoding trigger definition",
+				"",
+				http.StatusBadRequest,
+			)
+			return nil, &err
+		}
+		identity = common.ComputeEventIdentity(identityPrefix[:], ethCommon.HexToAddress(address), triggerDefinitionBytes)
+	} else {
+		// Time-based identity computation: hash(prefix + sender)
+		identity = common.ComputeIdentity(identityPrefix[:], ethCommon.HexToAddress(address))
+	}
 	epochID := shcrypto.ComputeEpochID(identity)
 	return &GetDataForEncryptionResponse{
 		Eon:            eon,

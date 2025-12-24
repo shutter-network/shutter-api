@@ -138,7 +138,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves all the necessary data required by clients for encrypting any message.",
+                "description": "Retrieves all the necessary data required by clients for encrypting any message. Supports both time-based and event-based identity computation. If triggerDefinition is provided, the identity will be computed for event-based triggers. Otherwise, it uses time-based identity computation.",
                 "produces": [
                     "application/json"
                 ],
@@ -158,6 +158,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you.",
                         "name": "identityPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional event trigger definition (hex-encoded with 0x prefix). If provided, identity will be computed for event-based triggers. This parameter is strictly for event-based triggers.",
+                        "name": "triggerDefinition",
                         "in": "query"
                     }
                 ],
@@ -228,6 +234,71 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Decryption key not found for the associated identity.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/get_event_trigger_ttl": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the time-to-live (TTL) for a given event identity registration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Get event identity registration TTL.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Eon number associated with the event identity registration.",
+                        "name": "eon",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Identity associated with the event identity registration.",
+                        "name": "identity",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetEventIdentityRegistrationTTL"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get event identity registration TTL request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "404": {
+                        "description": "Event identity registration not found.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -415,6 +486,15 @@ const docTemplate = `{
                 "identity": {
                     "type": "string",
                     "example": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
+                }
+            }
+        },
+        "GetEventIdentityRegistrationTTL": {
+            "type": "object",
+            "properties": {
+                "ttl": {
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },

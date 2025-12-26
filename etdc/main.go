@@ -20,7 +20,7 @@ import (
 //
 //	{
 //		"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
-//		"event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
+//		"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
 //		"arguments": [
 //			{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
 //			{"name": "amount", "op": "gte", "number": 2}]

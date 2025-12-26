@@ -29,17 +29,17 @@ func TestEventDecryptionValidation(t *testing.T) {
 	router := setupRouter()
 	testData := []string{
 		// "grom" != "from"
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "grom", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "grom", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 		// "op": "gt" on "bytes" value (must be "number")
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, address notify)","arguments": [{"name": "notify", "op": "gt", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, address notify)","arguments": [{"name": "notify", "op": "gt", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"}]}`,
 		// "op: gte" illegal on indexed address
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "gte", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "gte", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 		// argument "from" defined more than once
-		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "from", "op": "eq", "value": "0x8e13976721ebff885611c8391d9b02749c1283fa"}]}`,
+		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "from", "op": "eq", "value": "0x8e13976721ebff885611c8391d9b02749c1283fa"}]}`,
 		// invalid JSON
 		`{foo: "bar"}`,
 		// missing contract address
-		`{"event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
+		`{"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 		// missing signature
 		`{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`,
 	}
@@ -53,7 +53,7 @@ func TestEventDecryptionValidation(t *testing.T) {
 
 func TestEventDecryptionData(t *testing.T) {
 	router := setupRouter()
-	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "event_sig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`
+	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`
 	w := httptest.NewRecorder()
 	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
 	assert.NilError(t, err, "hex decode failed")

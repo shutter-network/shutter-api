@@ -253,21 +253,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/get_event_trigger_ttl": {
+        "/get_event_trigger_expiration_block": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves the time-to-live (TTL) for a given event identity registration.",
+                "description": "Retrieves the expiration block number for a given event identity registration.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Crypto"
                 ],
-                "summary": "Get event identity registration TTL.",
+                "summary": "Get event identity registration expiration block number.",
                 "parameters": [
                     {
                         "type": "integer",
@@ -278,8 +278,15 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Identity associated with the event identity registration.",
-                        "name": "identity",
+                        "description": "Identity prefix associated with the event identity registration.",
+                        "name": "identityPrefix",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
+                        "name": "address",
                         "in": "query",
                         "required": true
                     }
@@ -288,11 +295,11 @@ const docTemplate = `{
                     "200": {
                         "description": "Success.",
                         "schema": {
-                            "$ref": "#/definitions/GetEventIdentityRegistrationTTL"
+                            "$ref": "#/definitions/GetEventTriggerExpirationBlock"
                         }
                     },
                     "400": {
-                        "description": "Invalid Get event identity registration TTL request.",
+                        "description": "Invalid Get event identity registration expiration block number request.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -441,9 +448,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "0x3465a347342B72BCf800aBf814324ba4a803c32b"
                 },
-                "event_sig": {
+                "eventSig": {
                     "type": "string",
-                    "example": "Transfer(indexed from address, indexed to address, amount uint256)"
+                    "example": "Transfer(address indexed from, address indexed to, uint256 amount)"
                 }
             }
         },
@@ -489,12 +496,12 @@ const docTemplate = `{
                 }
             }
         },
-        "GetEventIdentityRegistrationTTL": {
+        "GetEventTriggerExpirationBlock": {
             "type": "object",
             "properties": {
-                "ttl": {
+                "expiration_block_number": {
                     "type": "integer",
-                    "example": 100
+                    "example": 12345678
                 }
             }
         },
@@ -591,7 +598,7 @@ const docTemplate = `{
         "usecase.EventTriggerDefinitionResponse": {
             "type": "object",
             "properties": {
-                "triggerDefinition": {
+                "trigger_definition": {
                     "type": "string",
                     "example": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
                 }

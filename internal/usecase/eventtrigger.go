@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/defiweb/go-sigparser"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -16,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rs/zerolog/log"
 	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
 	"github.com/shutter-network/shutter-api/common"
@@ -34,18 +34,18 @@ type EventArgument struct {
 	Bytes    string `json:"bytes" example:"0xabcdef01234567"`
 }
 type EventTriggerDefinitionRequest struct {
-	EventSignature  string          `json:"event_sig" example:"Transfer(indexed from address, indexed to address, amount uint256)"`
+	EventSignature  string          `json:"eventSig" example:"Transfer(address indexed from, address indexed to, uint256 amount)"`
 	ContractAddress ecommon.Address `json:"contract" swaggertype:"string" example:"0x3465a347342B72BCf800aBf814324ba4a803c32b"`
 	Arguments       []EventArgument `json:"arguments"`
 } // @name EventTriggerDefinitionRequest
 
 type EventTriggerDefinitionResponse struct {
-	EventTriggerDefinition string `json:"triggerDefinition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
+	EventTriggerDefinition string `json:"trigger_definition" example:"0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"`
 }
 
-type GetEventIdentityRegistrationTTLResponse struct {
-	TTL uint64 `json:"ttl" example:"100"`
-} // @name GetEventIdentityRegistrationTTL
+type GetEventTriggerExpirationBlockResponse struct {
+	ExpirationBlockNumber uint64 `json:"expiration_block_number" example:"12345678"`
+} // @name GetEventTriggerExpirationBlock
 
 func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
 	var errors []error
@@ -386,8 +386,9 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinition)
 
 	_, err = uc.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:      int64(eon),
-		Identity: identity,
+		Eon:            int64(eon),
+		IdentityPrefix: identityPrefix[:],
+		Sender:         newSigner.From.Hex(),
 	})
 	if err == nil {
 		log.Warn().Msg("event identity already registered")
@@ -436,9 +437,8 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		Eon:                    int64(eon),
 		Identity:               identity,
 		IdentityPrefix:         identityPrefix[:],
-		EonKey:                 eonKeyBytes,
+		Sender:                 newSigner.From.Hex(),
 		EventTriggerDefinition: eventTriggerDefinition,
-		Ttl:                    pgtype.Int8{Int64: int64(ttl), Valid: true},
 		TxHash:                 txHashBytes,
 	})
 	if err != nil {
@@ -446,6 +446,8 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		// Note: Transaction already sent, so we log the error but don't fail the request
 		// The registration is on-chain even if DB insert fails
 	}
+
+	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identityPrefix[:], newSigner.From.Hex(), ttl)
 
 	metrics.TotalSuccessfulIdentityRegistration.Inc()
 	return &RegisterIdentityResponse{
@@ -458,35 +460,76 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 
 }
 
-func (uc *CryptoUsecase) GetEventIdentityRegistrationTTL(ctx context.Context, eon uint64, identity string) (*GetEventIdentityRegistrationTTLResponse, *httpError.Http) {
-	identityBytes, err := hex.DecodeString(strings.TrimPrefix(identity, "0x"))
+func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon.Hash, eon uint64, identityPrefix []byte, sender string, ttl uint64) {
+	ctx := context.Background()
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		receipt, err := uc.ethClient.TransactionReceipt(ctx, txHash)
+		if err == nil {
+			if receipt.Status == 0 {
+				log.Error().Str("tx_hash", txHash.Hex()).Msg("event identity registration transaction failed")
+				return
+			}
+
+			expirationBlockNumber := receipt.BlockNumber.Uint64() + ttl
+			err = uc.dbQuery.UpdateEventIdentityRegistrationExpirationBlockNumber(ctx, data.UpdateEventIdentityRegistrationExpirationBlockNumberParams{
+				ExpirationBlockNumber: int64(expirationBlockNumber),
+				Eon:                   int64(eon),
+				IdentityPrefix:        identityPrefix,
+				Sender:                sender,
+			})
+			if err != nil {
+				log.Err(err).Str("tx_hash", txHash.Hex()).Msg("failed to update expiration block number")
+			}
+			return
+		}
+
+		<-ticker.C
+	}
+}
+
+func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon uint64, identityPrefix string, sender string) (*GetEventTriggerExpirationBlockResponse, *httpError.Http) {
+	identityPrefixBytes, err := hex.DecodeString(strings.TrimPrefix(identityPrefix, "0x"))
 	if err != nil {
-		log.Err(err).Msg("err encountered while decoding identity")
+		log.Err(err).Msg("err encountered while decoding identity prefix")
 		err := httpError.NewHttpError(
-			"error encountered while decoding identity",
+			"error encountered while decoding identity prefix",
 			"",
 			http.StatusBadRequest,
 		)
 		return nil, &err
 	}
 
-	if len(identityBytes) != 32 {
-		log.Err(err).Msg("identity should be of length 32")
+	if len(identityPrefixBytes) != 32 {
+		log.Err(err).Msg("identity prefix should be of length 32")
 		err := httpError.NewHttpError(
-			"identity should be of length 32",
+			"identity prefix should be of length 32",
 			"",
 			http.StatusBadRequest,
 		)
 		return nil, &err
 	}
 
-	ttl, err := uc.dbQuery.GetEventIdentityRegistrationTTL(ctx, data.GetEventIdentityRegistrationTTLParams{
-		Eon:      int64(eon),
-		Identity: identityBytes,
+	if !ecommon.IsHexAddress(sender) {
+		log.Err(err).Msg("invalid address")
+		err := httpError.NewHttpError(
+			"invalid address",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	expirationBlockNumber, err := uc.dbQuery.GetEventTriggerExpirationBlockNumber(ctx, data.GetEventTriggerExpirationBlockNumberParams{
+		Eon:            int64(eon),
+		IdentityPrefix: identityPrefixBytes,
+		Sender:         sender,
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			log.Debug().Uint64("eon", eon).Str("identity", identity).Msg("event identity registration not found")
+			log.Debug().Uint64("eon", eon).Str("identityPrefix", identityPrefix).Str("sender", sender).Msg("event identity registration not found")
 			err := httpError.NewHttpError(
 				"event identity registration not found",
 				"",
@@ -494,26 +537,16 @@ func (uc *CryptoUsecase) GetEventIdentityRegistrationTTL(ctx context.Context, eo
 			)
 			return nil, &err
 		}
-		log.Err(err).Msg("err encountered while querying event identity registration TTL")
+		log.Err(err).Msg("err encountered while querying event identity registration expiration block number")
 		err := httpError.NewHttpError(
-			"error encountered while querying event identity registration TTL",
+			"error encountered while querying event identity registration expiration block number",
 			"",
 			http.StatusInternalServerError,
 		)
 		return nil, &err
 	}
 
-	if !ttl.Valid {
-		log.Warn().Uint64("eon", eon).Str("identity", identity).Msg("ttl is null for event identity registration")
-		err := httpError.NewHttpError(
-			"ttl not set for event identity registration",
-			"",
-			http.StatusBadRequest,
-		)
-		return nil, &err
-	}
-
-	return &GetEventIdentityRegistrationTTLResponse{
-		TTL: uint64(ttl.Int64),
+	return &GetEventTriggerExpirationBlockResponse{
+		ExpirationBlockNumber: uint64(expirationBlockNumber),
 	}, nil
 }

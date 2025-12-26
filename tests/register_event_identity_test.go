@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/internal/data"
 	"github.com/stretchr/testify/mock"
@@ -19,7 +21,7 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 	identityPrefix, err := generateRandomBytes(32)
 	s.Require().NoError(err)
 	identityPrefixStringified := hex.EncodeToString(identityPrefix)
-	blockNumber := rand.Uint64()
+	blockNumber := uint64(1000000)
 
 	eon := rand.Uint64()
 
@@ -62,6 +64,20 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 		Return(randomTx, nil).
 		Once()
 
+	// Mock transaction receipt - use a different block number for the receipt
+	txBlockNumber := blockNumber + 5 // Transaction mined in a later block
+	receipt := &types.Receipt{
+		Status:      types.ReceiptStatusSuccessful,
+		BlockNumber: big.NewInt(int64(txBlockNumber)),
+	}
+
+	s.ethClient.
+		On("TransactionReceipt", mock.Anything, randomTx.Hash()).
+		Return(receipt, nil).
+		Once()
+
+	expectedExpirationBlockNumber := int64(txBlockNumber + ttl)
+
 	response, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().Nil(err)
 
@@ -73,17 +89,25 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 
 	// Verify the registration was stored in the database
 	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:      int64(eon),
-		Identity: identity,
+		Eon:            int64(eon),
+		IdentityPrefix: identityPrefix,
+		Sender:         newSigner.From.Hex(),
 	})
+	for i := 0; i < 50 && (dbErr != nil || dbRegistration.ExpirationBlockNumber != expectedExpirationBlockNumber); i++ {
+		time.Sleep(20 * time.Millisecond)
+		dbRegistration, dbErr = s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
+			Eon:            int64(eon),
+			IdentityPrefix: identityPrefix,
+			Sender:         newSigner.From.Hex(),
+		})
+	}
 	s.Require().NoError(dbErr)
 	s.Require().Equal(int64(eon), dbRegistration.Eon)
 	s.Require().Equal(identity, dbRegistration.Identity)
 	s.Require().Equal(identityPrefix, dbRegistration.IdentityPrefix)
-	s.Require().Equal(eonPublicKey.Marshal(), dbRegistration.EonKey)
+	s.Require().Equal(newSigner.From.Hex(), dbRegistration.Sender)
 	s.Require().Equal(eventTriggerDefinitionBytes, dbRegistration.EventTriggerDefinition)
-	s.Require().True(dbRegistration.Ttl.Valid)
-	s.Require().Equal(int64(ttl), dbRegistration.Ttl.Int64)
+	s.Require().Equal(expectedExpirationBlockNumber, dbRegistration.ExpirationBlockNumber)
 	s.Require().Equal(randomTx.Hash().Bytes(), dbRegistration.TxHash)
 }
 
@@ -109,7 +133,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_InvalidEventTriggerDefini
 	identityPrefix, err := generateRandomBytes(32)
 	s.Require().NoError(err)
 	identityPrefixStringified := hex.EncodeToString(identityPrefix)
-	blockNumber := rand.Uint64()
+	// Use a reasonable block number that won't overflow when converted to int64
+	blockNumber := uint64(1000000)
 	eon := rand.Uint64()
 
 	newSigner, err := bind.NewKeyedTransactorWithChainID(s.config.SigningKey, big.NewInt(GnosisMainnetChainID))
@@ -158,7 +183,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_TriggerDefinitionWithout0
 	identityPrefix, err := generateRandomBytes(32)
 	s.Require().NoError(err)
 	identityPrefixStringified := hex.EncodeToString(identityPrefix)
-	blockNumber := rand.Uint64()
+	// Use a reasonable block number that won't overflow when converted to int64
+	blockNumber := uint64(1000000)
 	eon := rand.Uint64()
 
 	newSigner, err := bind.NewKeyedTransactorWithChainID(s.config.SigningKey, big.NewInt(GnosisMainnetChainID))
@@ -206,7 +232,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_ZeroBytesEventTriggerDefi
 	identityPrefix, err := generateRandomBytes(32)
 	s.Require().NoError(err)
 	identityPrefixStringified := hex.EncodeToString(identityPrefix)
-	blockNumber := rand.Uint64()
+	// Use a reasonable block number that won't overflow when converted to int64
+	blockNumber := uint64(1000000)
 	eon := rand.Uint64()
 
 	newSigner, err := bind.NewKeyedTransactorWithChainID(s.config.SigningKey, big.NewInt(GnosisMainnetChainID))
@@ -252,7 +279,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_ZeroBytesEventTriggerDefi
 func (s *TestShutterService) TestRegisterEventIdentity_EmptyIdentityPrefix() {
 	ctx := context.Background()
 	ttl := uint64(100)
-	blockNumber := rand.Uint64()
+	// Use a reasonable block number that won't overflow when converted to int64
+	blockNumber := uint64(1000000)
 	eon := rand.Uint64()
 
 	// Hardcoded valid event trigger definition
@@ -303,6 +331,18 @@ func (s *TestShutterService) TestRegisterEventIdentity_EmptyIdentityPrefix() {
 		Return(randomTx, nil).
 		Once()
 
+	// Mock transaction receipt
+	txBlockNumber := blockNumber + 5
+	receipt := &types.Receipt{
+		Status:      types.ReceiptStatusSuccessful,
+		BlockNumber: big.NewInt(int64(txBlockNumber)),
+	}
+
+	s.ethClient.
+		On("TransactionReceipt", mock.Anything, randomTx.Hash()).
+		Return(receipt, nil).
+		Once()
+
 	data, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, "", ttl)
 	s.Require().Nil(err)
 
@@ -319,7 +359,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 	identityPrefix, err := generateRandomBytes(32)
 	s.Require().NoError(err)
 	identityPrefixStringified := hex.EncodeToString(identityPrefix)
-	blockNumber := rand.Uint64()
+	// Use a reasonable block number that won't overflow when converted to int64
+	blockNumber := uint64(1000000)
 
 	eon := rand.Uint64()
 
@@ -363,6 +404,18 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 		Return(randomTx, nil).
 		Once()
 
+	// Mock transaction receipt
+	txBlockNumber := blockNumber + 5
+	receipt := &types.Receipt{
+		Status:      types.ReceiptStatusSuccessful,
+		BlockNumber: big.NewInt(int64(txBlockNumber)),
+	}
+
+	s.ethClient.
+		On("TransactionReceipt", mock.Anything, randomTx.Hash()).
+		Return(receipt, nil).
+		Once()
+
 	// First registration should succeed
 	response, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().Nil(err)
@@ -371,8 +424,9 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 
 	// Verify the registration was stored in the database
 	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:      int64(eon),
-		Identity: identity,
+		Eon:            int64(eon),
+		IdentityPrefix: identityPrefix,
+		Sender:         newSigner.From.Hex(),
 	})
 	s.Require().NoError(dbErr)
 	s.Require().Equal(int64(eon), dbRegistration.Eon)

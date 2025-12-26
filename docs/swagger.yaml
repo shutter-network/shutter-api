@@ -8,8 +8,8 @@ definitions:
       contract:
         example: 0x3465a347342B72BCf800aBf814324ba4a803c32b
         type: string
-      event_sig:
-        example: Transfer(indexed from address, indexed to address, amount uint256)
+      eventSig:
+        example: Transfer(address indexed from, address indexed to, uint256 amount)
         type: string
     type: object
   GetDataForEncryption:
@@ -42,10 +42,10 @@ definitions:
         example: 0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75
         type: string
     type: object
-  GetEventIdentityRegistrationTTL:
+  GetEventTriggerExpirationBlock:
     properties:
-      ttl:
-        example: 100
+      expiration_block_number:
+        example: 12345678
         type: integer
     type: object
   RegisterEventIdentityRequest:
@@ -113,7 +113,7 @@ definitions:
     type: object
   usecase.EventTriggerDefinitionResponse:
     properties:
-      triggerDefinition:
+      trigger_definition:
         example: 0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0
         type: string
     type: object
@@ -295,18 +295,26 @@ paths:
       summary: Get decryption key.
       tags:
       - Crypto
-  /get_event_trigger_ttl:
+  /get_event_trigger_expiration_block:
     get:
-      description: Retrieves the time-to-live (TTL) for a given event identity registration.
+      description: Retrieves the expiration block number for a given event identity
+        registration.
       parameters:
       - description: Eon number associated with the event identity registration.
         in: query
         name: eon
         required: true
         type: integer
-      - description: Identity associated with the event identity registration.
+      - description: Identity prefix associated with the event identity registration.
         in: query
-        name: identity
+        name: identityPrefix
+        required: true
+        type: string
+      - description: 'Ethereum address associated with the identity. For gnosis mainnet,
+          pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado
+          pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918'
+        in: query
+        name: address
         required: true
         type: string
       produces:
@@ -315,9 +323,10 @@ paths:
         "200":
           description: Success.
           schema:
-            $ref: '#/definitions/GetEventIdentityRegistrationTTL'
+            $ref: '#/definitions/GetEventTriggerExpirationBlock'
         "400":
-          description: Invalid Get event identity registration TTL request.
+          description: Invalid Get event identity registration expiration block number
+            request.
           schema:
             $ref: '#/definitions/error.Http'
         "404":
@@ -334,7 +343,7 @@ paths:
             $ref: '#/definitions/error.Http'
       security:
       - BearerAuth: []
-      summary: Get event identity registration TTL.
+      summary: Get event identity registration expiration block number.
       tags:
       - Crypto
   /register_event_identity:

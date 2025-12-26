@@ -74,6 +74,27 @@ services:
       caddy.rate_limit_0.zone_3.match.path: "*/decrypt_commitment*"
       caddy.rate_limit_0.zone_3.match.method: GET
 
+      caddy.rate_limit_0.zone_4: compile_event_trigger_definition__unauthorized
+      caddy.rate_limit_0.zone_4.key: "{remote_host}"
+      caddy.rate_limit_0.zone_4.events: 20
+      caddy.rate_limit_0.zone_4.window: 1d
+      caddy.rate_limit_0.zone_4.match.path: "*/compile_event_trigger_definition*"
+      caddy.rate_limit_0.zone_4.match.method: POST
+
+      caddy.rate_limit_0.zone_5: register_event_identity__unauthorized
+      caddy.rate_limit_0.zone_5.key: "{remote_host}"
+      caddy.rate_limit_0.zone_5.events: 5
+      caddy.rate_limit_0.zone_5.window: 1d
+      caddy.rate_limit_0.zone_5.match.path: "*/register_event_identity*"
+      caddy.rate_limit_0.zone_5.match.method: POST
+
+      caddy.rate_limit_0.zone_6: get_event_trigger_expiration_block__unauthorized
+      caddy.rate_limit_0.zone_6.key: "{remote_host}"
+      caddy.rate_limit_0.zone_6.events: 20
+      caddy.rate_limit_0.zone_6.window: 1d
+      caddy.rate_limit_0.zone_6.match.path: "*/get_event_trigger_expiration_block*"
+      caddy.rate_limit_0.zone_6.match.method: GET
+
       # Rate limits with api key
       caddy.rate_limit_1: "@withApiKey"
       caddy.rate_limit_1.log_key: " "
@@ -105,6 +126,27 @@ services:
       caddy.rate_limit_1.zone_3.window: 1d
       caddy.rate_limit_1.zone_3.match.path: "*/decrypt_commitment*"
       caddy.rate_limit_1.zone_3.match.method: GET
+
+      caddy.rate_limit_1.zone_4: compile_event_trigger_definition__authorized
+      caddy.rate_limit_1.zone_4.key: "{header.Authorization}"
+      caddy.rate_limit_1.zone_4.events: 2000
+      caddy.rate_limit_1.zone_4.window: 1d
+      caddy.rate_limit_1.zone_4.match.path: "*/compile_event_trigger_definition*"
+      caddy.rate_limit_1.zone_4.match.method: POST
+
+      caddy.rate_limit_1.zone_5: register_event_identity__authorized
+      caddy.rate_limit_1.zone_5.key: "{header.Authorization}"
+      caddy.rate_limit_1.zone_5.events: 500
+      caddy.rate_limit_1.zone_5.window: 1d
+      caddy.rate_limit_1.zone_5.match.path: "*/register_event_identity*"
+      caddy.rate_limit_1.zone_5.match.method: POST
+
+      caddy.rate_limit_1.zone_6: get_event_trigger_expiration_block__authorized
+      caddy.rate_limit_1.zone_6.key: "{header.Authorization}"
+      caddy.rate_limit_1.zone_6.events: 2000
+      caddy.rate_limit_1.zone_6.window: 1d
+      caddy.rate_limit_1.zone_6.match.path: "*/get_event_trigger_expiration_block*"
+      caddy.rate_limit_1.zone_6.match.method: GET
 
   caddy:
     build:

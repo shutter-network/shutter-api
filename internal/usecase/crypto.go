@@ -13,6 +13,7 @@ import (
 	cryptorand "crypto/rand"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ecommon "github.com/ethereum/go-ethereum/common"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -56,6 +57,7 @@ type KeyBroadcastInterface interface {
 type EthClientInterface interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	ChainID(ctx context.Context) (*big.Int, error)
+	TransactionReceipt(ctx context.Context, txHash ecommon.Hash) (*types.Receipt, error)
 }
 
 type GetDecryptionKeyResponse struct {

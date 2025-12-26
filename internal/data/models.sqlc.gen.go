@@ -18,9 +18,9 @@ type EventIdentityRegistration struct {
 	Eon                    int64
 	Identity               []byte
 	IdentityPrefix         []byte
-	EonKey                 []byte
+	Sender                 string
 	EventTriggerDefinition []byte
-	Ttl                    pgtype.Int8
+	ExpirationBlockNumber  int64
 	TxHash                 []byte
 	CreatedAt              pgtype.Timestamp
 }

@@ -216,35 +216,34 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 
 //	@BasePath	/api
 //
-// # EventTriggerDefinition godoc
+// EventTriggerDefinition godoc
 //
-//		@Summary		Allows clients to compile an event trigger definition string.
-//		@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
-//						supporting event based decryption triggers. Example request body:
-//						{
-//	  						"contract": "0x3465a347342B72BCf800aBf814324ba4a803c32b",
-//	  						"event_sig": "Transfer(indexed from address, indexed to address, amount uint256)",
-//	  						"arguments": [
-//	    							{ "name": "from", "op": "eq", "bytes": "0x456d9347342B72BCf800bBf117391ac2f807c6bF" },
-//	    							{ "name": "amount", "op": "gte", "number": 25433 }
-//	  							]
-//							}
-//						The object format for the "arguments" list is:
-//						- "name": <matching argument name from signature>
-//						- "op": <one of: lt, lte, eq, gte, gt>
-//						- "number": <integer argument for numeric comparison>
-//						- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
-//						Note: the resulting condition for the trigger is a logical AND of all arguments given.
+//	@Summary		Allows clients to compile an event trigger definition string.
+//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
+//					supporting event based decryption triggers. Example request body:
+//					{
+//						"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
+//						"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
+//						"arguments": [
+//							{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
+//							{"name": "amount", "op": "gte", "number": 2}]
+//					}
+//					The object format for the "arguments" list is:
+//					- "name": <matching argument name from signature>
+//					- "op": <one of: lt, lte, eq, gte, gt>
+//					- "number": <integer argument for numeric comparison>
+//					- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
+//					Note: the resulting condition for the trigger is a logical AND of all arguments given.
 //
-//		@Tags			Crypto
-//		@Produce		json
-//		@Param			request	body		EventTriggerDefinitionRequest		true	"Event signature and match arguments."
-//		@Success		200		{object}	usecase.EventTriggerDefinitionResponse	"Success."
-//		@Failure		400		{object}	error.Http							"Invalid Event Data."
-//		@Failure		429		{object}	error.Http							"Too many requests. Rate limited."
-//		@Failure		500		{object}	error.Http							"Internal server error."
-//		@Security		BearerAuth
-//		@Router			/compile_event_trigger_definition [post]
+//	@Tags			Crypto
+//	@Produce		json
+//	@Param			request	body		EventTriggerDefinitionRequest		true	"Event signature and match arguments."
+//	@Success		200		{object}	usecase.EventTriggerDefinitionResponse	"Success."
+//	@Failure		400		{object}	error.Http							"Invalid Event Data."
+//	@Failure		429		{object}	error.Http							"Too many requests. Rate limited."
+//	@Failure		500		{object}	error.Http							"Internal server error."
+//	@Security		BearerAuth
+//	@Router			/compile_event_trigger_definition [post]
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 	CompileEventTriggerDefinition(ctx)
 }
@@ -313,22 +312,23 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 
 //	@BasePath	/api
 //
-// GetEventIdentityRegistrationTTL godoc
+// GetEventTriggerExpirationBlock godoc
 //
-//		@Summary		Get event identity registration TTL.
-//		@Description	Retrieves the time-to-live (TTL) for a given event identity registration.
+//		@Summary		Get event identity registration expiration block number.
+//		@Description	Retrieves the expiration block number for a given event identity registration.
 //		@Tags			Crypto
 //		@Produce		json
 //		@Param			eon		query		uint64									true	"Eon number associated with the event identity registration."
-//		@Param			identity	query		string									true	"Identity associated with the event identity registration."
-//		@Success		200		{object}	usecase.GetEventIdentityRegistrationTTLResponse	"Success."
-//		@Failure		400		{object}	error.Http								"Invalid Get event identity registration TTL request."
+//		@Param			identityPrefix	query		string									true	"Identity prefix associated with the event identity registration."
+//		@Param			address	query		string									true	"Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
+//		@Success		200		{object}	usecase.GetEventTriggerExpirationBlockResponse	"Success."
+//		@Failure		400		{object}	error.Http								"Invalid Get event identity registration expiration block number request."
 //		@Failure		404		{object}	error.Http								"Event identity registration not found."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_event_trigger_ttl [get]
-func (svc *CryptoService) GetEventIdentityRegistrationTTL(ctx *gin.Context) {
+//		@Router			/get_event_trigger_expiration_block [get]
+func (svc *CryptoService) GetEventTriggerExpirationBlock(ctx *gin.Context) {
 	eonStr, ok := ctx.GetQuery("eon")
 	if !ok {
 		err := sherror.NewHttpError(
@@ -351,18 +351,29 @@ func (svc *CryptoService) GetEventIdentityRegistrationTTL(ctx *gin.Context) {
 		return
 	}
 
-	identity, ok := ctx.GetQuery("identity")
+	identityPrefix, ok := ctx.GetQuery("identityPrefix")
 	if !ok {
 		err := sherror.NewHttpError(
 			"query parameter not found",
-			"identity query parameter is required",
+			"identityPrefix query parameter is required",
 			http.StatusBadRequest,
 		)
 		ctx.Error(err)
 		return
 	}
 
-	data, httpErr := svc.CryptoUsecase.GetEventIdentityRegistrationTTL(ctx, eon, identity)
+	address, ok := ctx.GetQuery("address")
+	if !ok {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"address query parameter is required",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	data, httpErr := svc.CryptoUsecase.GetEventTriggerExpirationBlock(ctx, eon, identityPrefix, address)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return

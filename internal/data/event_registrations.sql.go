@@ -7,51 +7,60 @@ package data
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getEventIdentityRegistration = `-- name: GetEventIdentityRegistration :one
-SELECT eon, identity, identity_prefix, eon_key, event_trigger_definition, ttl, tx_hash, created_at FROM event_identity_registration
-WHERE eon = $1 AND identity = $2
+SELECT
+    eon,
+    identity,
+    identity_prefix,
+    sender,
+    event_trigger_definition,
+    COALESCE(expiration_block_number, 0) AS expiration_block_number,
+    tx_hash,
+    created_at
+FROM event_identity_registration
+WHERE eon = $1 AND identity_prefix = $2 AND sender = $3
 `
 
 type GetEventIdentityRegistrationParams struct {
-	Eon      int64
-	Identity []byte
+	Eon            int64
+	IdentityPrefix []byte
+	Sender         string
 }
 
 func (q *Queries) GetEventIdentityRegistration(ctx context.Context, arg GetEventIdentityRegistrationParams) (EventIdentityRegistration, error) {
-	row := q.db.QueryRow(ctx, getEventIdentityRegistration, arg.Eon, arg.Identity)
+	row := q.db.QueryRow(ctx, getEventIdentityRegistration, arg.Eon, arg.IdentityPrefix, arg.Sender)
 	var i EventIdentityRegistration
 	err := row.Scan(
 		&i.Eon,
 		&i.Identity,
 		&i.IdentityPrefix,
-		&i.EonKey,
+		&i.Sender,
 		&i.EventTriggerDefinition,
-		&i.Ttl,
+		&i.ExpirationBlockNumber,
 		&i.TxHash,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const getEventIdentityRegistrationTTL = `-- name: GetEventIdentityRegistrationTTL :one
-SELECT ttl FROM event_identity_registration
-WHERE eon = $1 AND identity = $2
+const getEventTriggerExpirationBlockNumber = `-- name: GetEventTriggerExpirationBlockNumber :one
+SELECT COALESCE(expiration_block_number, 0) FROM event_identity_registration
+WHERE eon = $1 AND identity_prefix = $2 AND sender = $3
 `
 
-type GetEventIdentityRegistrationTTLParams struct {
-	Eon      int64
-	Identity []byte
+type GetEventTriggerExpirationBlockNumberParams struct {
+	Eon            int64
+	IdentityPrefix []byte
+	Sender         string
 }
 
-func (q *Queries) GetEventIdentityRegistrationTTL(ctx context.Context, arg GetEventIdentityRegistrationTTLParams) (pgtype.Int8, error) {
-	row := q.db.QueryRow(ctx, getEventIdentityRegistrationTTL, arg.Eon, arg.Identity)
-	var ttl pgtype.Int8
-	err := row.Scan(&ttl)
-	return ttl, err
+func (q *Queries) GetEventTriggerExpirationBlockNumber(ctx context.Context, arg GetEventTriggerExpirationBlockNumberParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getEventTriggerExpirationBlockNumber, arg.Eon, arg.IdentityPrefix, arg.Sender)
+	var expiration_block_number int64
+	err := row.Scan(&expiration_block_number)
+	return expiration_block_number, err
 }
 
 const insertEventIdentityRegistration = `-- name: InsertEventIdentityRegistration :exec
@@ -60,21 +69,19 @@ INSERT INTO event_identity_registration (
     eon,
     identity,
     identity_prefix,
-    eon_key,
+    sender,
     event_trigger_definition,
-    ttl,
     tx_hash
-) VALUES ($1, $2, $3, $4, $5, $6, $7)
-ON CONFLICT (eon, identity) DO NOTHING
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (eon, identity_prefix, sender) DO NOTHING
 `
 
 type InsertEventIdentityRegistrationParams struct {
 	Eon                    int64
 	Identity               []byte
 	IdentityPrefix         []byte
-	EonKey                 []byte
+	Sender                 string
 	EventTriggerDefinition []byte
-	Ttl                    pgtype.Int8
 	TxHash                 []byte
 }
 
@@ -84,10 +91,32 @@ func (q *Queries) InsertEventIdentityRegistration(ctx context.Context, arg Inser
 		arg.Eon,
 		arg.Identity,
 		arg.IdentityPrefix,
-		arg.EonKey,
+		arg.Sender,
 		arg.EventTriggerDefinition,
-		arg.Ttl,
 		arg.TxHash,
+	)
+	return err
+}
+
+const updateEventIdentityRegistrationExpirationBlockNumber = `-- name: UpdateEventIdentityRegistrationExpirationBlockNumber :exec
+UPDATE event_identity_registration
+SET expiration_block_number = $1
+WHERE eon = $2 AND identity_prefix = $3 AND sender = $4
+`
+
+type UpdateEventIdentityRegistrationExpirationBlockNumberParams struct {
+	ExpirationBlockNumber int64
+	Eon                   int64
+	IdentityPrefix        []byte
+	Sender                string
+}
+
+func (q *Queries) UpdateEventIdentityRegistrationExpirationBlockNumber(ctx context.Context, arg UpdateEventIdentityRegistrationExpirationBlockNumberParams) error {
+	_, err := q.db.Exec(ctx, updateEventIdentityRegistrationExpirationBlockNumber,
+		arg.ExpirationBlockNumber,
+		arg.Eon,
+		arg.IdentityPrefix,
+		arg.Sender,
 	)
 	return err
 }

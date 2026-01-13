@@ -10,14 +10,14 @@ import (
 	"testing"
 
 	sigparser "github.com/defiweb/go-sigparser"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
-
 	"github.com/ethereum/go-ethereum/common"
 	hexutil "github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gin-gonic/gin"
 	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
+	shcommon "github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/internal/usecase"
+	"github.com/stretchr/testify/require"
+	"gotest.tools/assert"
 )
 
 func setupRouter() *gin.Engine {
@@ -25,6 +25,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/test", CompileEventTriggerDefinition)
 	return router
 }
+
 func TestEventDecryptionValidation(t *testing.T) {
 	router := setupRouter()
 	testData := []string{
@@ -65,7 +66,7 @@ func TestEventDecryptionData(t *testing.T) {
 		Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
 		LogPredicates: []shs.LogPredicate{
 			usecase.Topic0(sig),
-			shs.LogPredicate{
+			{
 				LogValueRef: shs.LogValueRef{
 					Offset: 1,
 					Length: 1,
@@ -75,7 +76,7 @@ func TestEventDecryptionData(t *testing.T) {
 					ByteArgs: [][]byte{usecase.Align(fromAsBytes)},
 				},
 			},
-			shs.LogPredicate{
+			{
 				LogValueRef: shs.LogValueRef{
 					Offset: 4,
 					Length: 1,
@@ -84,11 +85,12 @@ func TestEventDecryptionData(t *testing.T) {
 					Op:      shs.UintGte,
 					IntArgs: []*big.Int{big.NewInt(1)},
 				},
-			}},
+			},
+		},
 	}
 
 	etd := usecase.EventTriggerDefinitionResponse{
-		EventTriggerDefinition: hex.EncodeToString(g.MarshalBytes()),
+		EventTriggerDefinition: shcommon.PrefixWith0x(hex.EncodeToString(g.MarshalBytes())),
 	}
 	expected, err := json.Marshal(etd)
 	assert.NilError(t, err, "error marshalling")

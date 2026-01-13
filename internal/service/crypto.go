@@ -287,7 +287,6 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 //	 	@Security		BearerAuth
 //		@Router			/register_event_identity [post]
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
-
 	var req RegisterEventIdentityRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		log.Err(err).Msg("err decoding request body")
@@ -320,7 +319,6 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 //		@Produce		json
 //		@Param			eon		query		uint64									true	"Eon number associated with the event identity registration."
 //		@Param			identityPrefix	query		string									true	"Identity prefix associated with the event identity registration."
-//		@Param			address	query		string									true	"Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
 //		@Success		200		{object}	usecase.GetEventTriggerExpirationBlockResponse	"Success."
 //		@Failure		400		{object}	error.Http								"Invalid Get event identity registration expiration block number request."
 //		@Failure		404		{object}	error.Http								"Event identity registration not found."
@@ -362,18 +360,7 @@ func (svc *CryptoService) GetEventTriggerExpirationBlock(ctx *gin.Context) {
 		return
 	}
 
-	address, ok := ctx.GetQuery("address")
-	if !ok {
-		err := sherror.NewHttpError(
-			"query parameter not found",
-			"address query parameter is required",
-			http.StatusBadRequest,
-		)
-		ctx.Error(err)
-		return
-	}
-
-	data, httpErr := svc.CryptoUsecase.GetEventTriggerExpirationBlock(ctx, eon, identityPrefix, address)
+	data, httpErr := svc.CryptoUsecase.GetEventTriggerExpirationBlock(ctx, eon, identityPrefix)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return

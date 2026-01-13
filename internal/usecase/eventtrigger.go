@@ -465,7 +465,7 @@ func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon
 	}
 }
 
-func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon uint64, identityPrefix string, sender string) (*GetEventTriggerExpirationBlockResponse, *httpError.Http) {
+func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon uint64, identityPrefix string) (*GetEventTriggerExpirationBlockResponse, *httpError.Http) {
 	identityPrefixBytes, err := hex.DecodeString(strings.TrimPrefix(identityPrefix, "0x"))
 	if err != nil {
 		log.Err(err).Msg("err encountered while decoding identity prefix")
@@ -487,15 +487,8 @@ func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon
 		return nil, &err
 	}
 
-	if !ecommon.IsHexAddress(sender) {
-		log.Err(err).Msg("invalid address")
-		err := httpError.NewHttpError(
-			"invalid address",
-			"",
-			http.StatusBadRequest,
-		)
-		return nil, &err
-	}
+	address := crypto.PubkeyToAddress(uc.config.SigningKey.PublicKey)
+	sender := address.Hex()
 
 	expirationBlockNumber, err := uc.dbQuery.GetEventTriggerExpirationBlockNumber(ctx, data.GetEventTriggerExpirationBlockNumberParams{
 		Eon:            int64(eon),

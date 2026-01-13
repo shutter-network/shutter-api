@@ -310,13 +310,6 @@ paths:
         name: identityPrefix
         required: true
         type: string
-      - description: 'Ethereum address associated with the identity. For gnosis mainnet,
-          pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado
-          pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918'
-        in: query
-        name: address
-        required: true
-        type: string
       produces:
       - application/json
       responses:

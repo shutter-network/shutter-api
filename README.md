@@ -226,7 +226,7 @@ Refer to the `/get_event_trigger_expiration_block` endpoint in the Swagger docum
 
 #### Example Request
 ```bash
-curl -X GET "https://<API_BASE_URL>/get_event_trigger_expiration_block?eon=1&identityPrefix=0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c&address=0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc"
+curl -X GET "https://<API_BASE_URL>/get_event_trigger_expiration_block?eon=1&identityPrefix=0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
 ```
 
 #### Example Response

@@ -54,7 +54,7 @@ func TestEventDecryptionValidation(t *testing.T) {
 
 func TestEventDecryptionData(t *testing.T) {
 	router := setupRouter()
-	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": 1}]}`
+	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": "1"}]}`
 	w := httptest.NewRecorder()
 	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
 	assert.NilError(t, err, "hex decode failed")

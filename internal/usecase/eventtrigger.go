@@ -30,7 +30,7 @@ import (
 type EventArgument struct {
 	Name     string `json:"name" example:"amount"`
 	Operator string `json:"op" example:"gte"`
-	Number   int    `json:"number" example:"25433"`
+	Number   string `json:"number" example:"25433"`
 	Bytes    string `json:"bytes" example:"0xabcdef01234567"`
 }
 type EventTriggerDefinitionRequest struct {
@@ -210,7 +210,11 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 					default:
 						return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
 					}
-					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(arg.Number))}
+					num, ok := big.NewInt(0).SetString(arg.Number, 10)
+					if !ok {
+						return lps, fmt.Errorf("cannot interpret %v as a decimal string (don't use literal int)", arg.Number)
+					}
+					lp.ValuePredicate.IntArgs = []*big.Int{num}
 					length = 1
 				}
 

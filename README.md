@@ -191,8 +191,8 @@ The trigger condition is specified by a compiled event trigger definition (creat
 
 Refer to the `/register_event_identity` endpoint in the Swagger documentation for details on parameters and responses.
 
-> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
-> [ShutterEventRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
+> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. For the time being, it is **not** possibly to register event based decryption triggers directly with the contract. The contract's definition can be found here:
+> [ShutterEventTriggerRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
 
 #### Example Request
 ```bash

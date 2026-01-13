@@ -209,7 +209,6 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 		}
 	}
 	return lps, nil
-
 }
 
 func opFromString(op string) shs.Op {
@@ -230,7 +229,6 @@ func opFromString(op string) shs.Op {
 }
 
 func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTriggerDefinitionHex string, identityPrefixStringified string, ttl uint64) (*RegisterIdentityResponse, *httpError.Http) {
-
 	var identityPrefix shcrypto.Block
 
 	if len(identityPrefixStringified) > 0 {
@@ -350,28 +348,6 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
-	// Check whitelist if it's configured
-	if len(uc.config.WhitelistedContractAddresses) > 0 {
-		isWhitelisted := false
-		for _, whitelistedAddr := range uc.config.WhitelistedContractAddresses {
-			if etd.Contract == whitelistedAddr {
-				isWhitelisted = true
-				break
-			}
-		}
-		if !isWhitelisted {
-			log.Warn().
-				Str("contract_address", etd.Contract.Hex()).
-				Msg("contract address is not whitelisted")
-			err := httpError.NewHttpError(
-				"contract address is not whitelisted",
-				fmt.Sprintf("contract address %s is not in the whitelist", etd.Contract.Hex()),
-				http.StatusForbidden,
-			)
-			return nil, &err
-		}
-	}
-
 	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainId)
 	if err != nil {
 		log.Err(err).Msg("err encountered while creating signer")
@@ -457,7 +433,6 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		EonKey:         common.PrefixWith0x(hex.EncodeToString(eonKeyBytes)),
 		TxHash:         tx.Hash().Hex(),
 	}, nil
-
 }
 
 func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon.Hash, eon uint64, identityPrefix []byte, sender string, ttl uint64) {

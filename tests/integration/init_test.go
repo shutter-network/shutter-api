@@ -2,13 +2,12 @@ package integration
 
 import (
 	"context"
+	"crypto/rand"
 	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
-
-	"crypto/rand"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -79,7 +78,7 @@ func (s *TestShutterService) SetupSuite() {
 	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
-	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig, []ethCommon.Address{})
+	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
 	s.Require().NoError(err)
 
 	rpc_url := os.Getenv("RPC_URL")

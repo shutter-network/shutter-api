@@ -182,19 +182,7 @@ func main() {
 	p2pConfig.Environment = env.Environment(p2pEnviroment)
 	p2pConfig.DiscoveryNamespace = os.Getenv("P2P_DISCOVERY_NAMESPACE")
 
-	var whitelistedContractAddresses []common.Address
-	whitelistedAddressesStr := os.Getenv("WHITELISTED_TRIGGER_CONTRACT_ADDRESSES")
-	if whitelistedAddressesStr != "" {
-		addressStrings := strings.Split(whitelistedAddressesStr, ",")
-		for _, addrStr := range addressStrings {
-			addrStr = strings.TrimSpace(addrStr)
-			if addrStr != "" {
-				whitelistedContractAddresses = append(whitelistedContractAddresses, common.HexToAddress(addrStr))
-			}
-		}
-	}
-
-	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig, whitelistedContractAddresses)
+	config, err := shutterAPICommon.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return

@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"testing"
 
-	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
 	"github.com/shutter-network/shutter-api/common"
@@ -51,10 +50,9 @@ func (s *TestShutterService) SetupSuite() {
 		return
 	}
 	s.config = &common.Config{
-		KeyperHTTPURL:                parsedURL,
-		SigningKey:                   privateKey,
-		PublicKey:                    publicKey,
-		WhitelistedContractAddresses: []ecommon.Address{},
+		KeyperHTTPURL: parsedURL,
+		SigningKey:    privateKey,
+		PublicKey:     publicKey,
 	}
 	s.shutterRegistryContract = new(mock.MockShutterregistry)
 	s.shutterEventRegistryContract = new(mock.MockShutterEventRegistry)

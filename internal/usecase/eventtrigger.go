@@ -194,7 +194,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 					}
 					lp.ValuePredicate.Op = shs.BytesEq
 					lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-					length = uint64(len([]byte(arg.Bytes)) / 32)
+					length = uint64(len(val) / shs.Word)
 				} else {
 					lp.ValuePredicate.Op = opFromString(arg.Operator)
 					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(arg.Number))}

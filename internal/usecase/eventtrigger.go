@@ -196,7 +196,20 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 					lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
 					length = uint64(len(val) / shs.Word)
 				} else {
-					lp.ValuePredicate.Op = opFromString(arg.Operator)
+					switch strings.ToLower(arg.Operator) {
+					case "lt":
+						lp.ValuePredicate.Op = shs.UintLt
+					case "lte":
+						lp.ValuePredicate.Op = shs.UintLte
+					case "eq":
+						lp.ValuePredicate.Op = shs.UintEq
+					case "gt":
+						lp.ValuePredicate.Op = shs.UintGt
+					case "gte":
+						lp.ValuePredicate.Op = shs.UintGte
+					default:
+						return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
+					}
 					lp.ValuePredicate.IntArgs = []*big.Int{big.NewInt(int64(arg.Number))}
 					length = 1
 				}
@@ -209,23 +222,6 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 		}
 	}
 	return lps, nil
-}
-
-func opFromString(op string) shs.Op {
-	switch strings.ToLower(op) {
-	case "lt":
-		return shs.UintLt
-	case "lte":
-		return shs.UintLte
-	case "eq":
-		return shs.UintEq
-	case "gt":
-		return shs.UintGt
-	case "gte":
-		return shs.UintGte
-	default:
-		return shs.BytesEq
-	}
 }
 
 func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTriggerDefinitionHex string, identityPrefixStringified string, ttl uint64) (*RegisterIdentityResponse, *httpError.Http) {

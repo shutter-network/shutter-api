@@ -329,6 +329,12 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 			)
 			return nil, &err
 		}
+		if len(triggerDefinitionBytes) == 0 {
+			err := fmt.Errorf("invalid triggerDefinition '%v'", triggerDefinitionHex)
+			log.Err(err).Msg("err encountered while decoding trigger definition")
+			errr := httpError.NewHttpError(err.Error(), "", http.StatusBadRequest)
+			return nil, &errr
+		}
 		identity = common.ComputeEventIdentity(identityPrefix[:], ethCommon.HexToAddress(address), triggerDefinitionBytes)
 	} else {
 		// Time-based identity computation: hash(prefix + sender)

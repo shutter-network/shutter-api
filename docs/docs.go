@@ -149,7 +149,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
+                        "description": "Ethereum address associated with the identity. Time‑based: use the address that will register the identity (your account if self‑registering, or the API signer address below if you are using the API register endpoint). Event‑based (triggerDefinition provided): users cannot self‑register because the registry is owner‑only, please use the API signer address below. Gnosis Mainnet API address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc Chiado API address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
                         "name": "address",
                         "in": "query",
                         "required": true
@@ -280,13 +280,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Identity prefix associated with the event identity registration.",
                         "name": "identityPrefix",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
-                        "name": "address",
                         "in": "query",
                         "required": true
                     }
@@ -586,8 +579,8 @@ const docTemplate = `{
                     "example": "amount"
                 },
                 "number": {
-                    "type": "integer",
-                    "example": 25433
+                    "type": "string",
+                    "example": "25433"
                 },
                 "op": {
                     "type": "string",

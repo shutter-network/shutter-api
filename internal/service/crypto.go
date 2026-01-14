@@ -233,7 +233,12 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //					- "op": <one of: lt, lte, eq, gte, gt>
 //					- "number": <integer argument for numeric comparison>
 //					- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
+//					Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
+//					For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
+//					For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
+//					For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.
 //					Note: the resulting condition for the trigger is a logical AND of all arguments given.
+//
 //
 //	@Tags			Crypto
 //	@Produce		json

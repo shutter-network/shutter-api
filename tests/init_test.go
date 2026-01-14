@@ -18,14 +18,15 @@ const GnosisMainnetChainID = 100
 
 type TestShutterService struct {
 	suite.Suite
-	testDB                   *common.TestDatabase
-	dbQuery                  *data.Queries
-	cryptoUsecase            *usecase.CryptoUsecase
-	config                   *common.Config
-	shutterRegistryContract  *mock.MockShutterregistry
-	keyperSetManagerContract *mock.MockKeyperSetManager
-	keyBroadcastContract     *mock.MockKeyBroadcast
-	ethClient                *mock.MockEthClient
+	testDB                       *common.TestDatabase
+	dbQuery                      *data.Queries
+	cryptoUsecase                *usecase.CryptoUsecase
+	config                       *common.Config
+	shutterRegistryContract      *mock.MockShutterregistry
+	shutterEventRegistryContract *mock.MockShutterEventRegistry
+	keyperSetManagerContract     *mock.MockKeyperSetManager
+	keyBroadcastContract         *mock.MockKeyBroadcast
+	ethClient                    *mock.MockEthClient
 }
 
 func TestShutterServiceSuite(t *testing.T) {
@@ -54,14 +55,16 @@ func (s *TestShutterService) SetupSuite() {
 		PublicKey:     publicKey,
 	}
 	s.shutterRegistryContract = new(mock.MockShutterregistry)
+	s.shutterEventRegistryContract = new(mock.MockShutterEventRegistry)
 	s.keyBroadcastContract = new(mock.MockKeyBroadcast)
 	s.keyperSetManagerContract = new(mock.MockKeyperSetManager)
 	s.ethClient = new(mock.MockEthClient)
-	s.cryptoUsecase = usecase.NewCryptoUsecase(s.testDB.DbInstance, s.shutterRegistryContract, s.keyperSetManagerContract, s.keyBroadcastContract, s.ethClient, s.config)
+	s.cryptoUsecase = usecase.NewCryptoUsecase(s.testDB.DbInstance, s.shutterRegistryContract, s.shutterEventRegistryContract, s.keyperSetManagerContract, s.keyBroadcastContract, s.ethClient, s.config)
 }
 
 func (s *TestShutterService) BeforeTest(suiteName, testName string) {
 	s.shutterRegistryContract.ExpectedCalls = nil
+	s.shutterEventRegistryContract.ExpectedCalls = nil
 	s.keyBroadcastContract.ExpectedCalls = nil
 	s.keyperSetManagerContract.ExpectedCalls = nil
 	s.ethClient.ExpectedCalls = nil

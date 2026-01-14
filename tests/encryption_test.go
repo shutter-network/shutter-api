@@ -102,7 +102,7 @@ func (s *TestShutterService) TestGetDataForEncryption() {
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	data, err := s.cryptoUsecase.GetDataForEncryption(ctx, sender, identityPrefixStringified)
+	data, err := s.cryptoUsecase.GetDataForEncryption(ctx, sender, identityPrefixStringified, "")
 	s.Require().Nil(err)
 
 	s.Require().Equal(data.Eon, eon)
@@ -139,6 +139,6 @@ func (s *TestShutterService) TestGetDataForEncryptionInvalidSender() {
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	_, err = s.cryptoUsecase.GetDataForEncryption(ctx, sender, identityPrefixStringified)
+	_, err = s.cryptoUsecase.GetDataForEncryption(ctx, sender, identityPrefixStringified, "")
 	s.Require().Error(err)
 }

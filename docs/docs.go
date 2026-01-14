@@ -15,6 +15,60 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/compile_event_trigger_definition": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Allows clients to compile an event trigger definition string.",
+                "parameters": [
+                    {
+                        "description": "Event signature and match arguments.",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/EventTriggerDefinitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/usecase.EventTriggerDefinitionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Event Data.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
         "/decrypt_commitment": {
             "get": {
                 "security": [
@@ -84,7 +138,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves all the necessary data required by clients for encrypting any message.",
+                "description": "Retrieves all the necessary data required by clients for encrypting any message. Supports both time-based and event-based identity computation. If triggerDefinition is provided, the identity will be computed for event-based triggers. Otherwise, it uses time-based identity computation.",
                 "produces": [
                     "application/json"
                 ],
@@ -104,6 +158,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you.",
                         "name": "identityPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional event trigger definition (hex-encoded with 0x prefix). If provided, identity will be computed for event-based triggers. This parameter is strictly for event-based triggers.",
+                        "name": "triggerDefinition",
                         "in": "query"
                     }
                 ],
@@ -193,6 +253,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/get_event_trigger_expiration_block": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the expiration block number for a given event identity registration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Get event identity registration expiration block number.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Eon number associated with the event identity registration.",
+                        "name": "eon",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Identity prefix associated with the event identity registration.",
+                        "name": "identityPrefix",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
+                        "name": "address",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetEventTriggerExpirationBlock"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get event identity registration expiration block number request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "404": {
+                        "description": "Event identity registration not found.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/register_event_identity": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Allows clients to register an identity used for encryption and event trigger definition for the decryption key associated with the encrypted message.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Allows clients to register an event trigger identity.",
+                "parameters": [
+                    {
+                        "description": "Event trigger definition, ttl and Identity which client want to make the registration with.",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/RegisterEventIdentityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/RegisterIdentityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Register identity request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
         "/register_identity": {
             "post": {
                 "security": [
@@ -249,6 +435,25 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "EventTriggerDefinitionRequest": {
+            "type": "object",
+            "properties": {
+                "arguments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usecase.EventArgument"
+                    }
+                },
+                "contract": {
+                    "type": "string",
+                    "example": "0x3465a347342B72BCf800aBf814324ba4a803c32b"
+                },
+                "eventSig": {
+                    "type": "string",
+                    "example": "Transfer(address indexed from, address indexed to, uint256 amount)"
+                }
+            }
+        },
         "GetDataForEncryption": {
             "type": "object",
             "properties": {
@@ -288,6 +493,32 @@ const docTemplate = `{
                 "identity": {
                     "type": "string",
                     "example": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
+                }
+            }
+        },
+        "GetEventTriggerExpirationBlock": {
+            "type": "object",
+            "properties": {
+                "expiration_block_number": {
+                    "type": "integer",
+                    "example": 12345678
+                }
+            }
+        },
+        "RegisterEventIdentityRequest": {
+            "type": "object",
+            "properties": {
+                "identityPrefix": {
+                    "type": "string",
+                    "example": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+                },
+                "triggerDefinition": {
+                    "type": "string",
+                    "example": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+                },
+                "ttl": {
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },
@@ -340,6 +571,36 @@ const docTemplate = `{
                 },
                 "statusCode": {
                     "type": "integer"
+                }
+            }
+        },
+        "usecase.EventArgument": {
+            "type": "object",
+            "properties": {
+                "bytes": {
+                    "type": "string",
+                    "example": "0xabcdef01234567"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "amount"
+                },
+                "number": {
+                    "type": "integer",
+                    "example": 25433
+                },
+                "op": {
+                    "type": "string",
+                    "example": "gte"
+                }
+            }
+        },
+        "usecase.EventTriggerDefinitionResponse": {
+            "type": "object",
+            "properties": {
+                "trigger_definition": {
+                    "type": "string",
+                    "example": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
                 }
             }
         }

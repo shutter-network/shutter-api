@@ -115,13 +115,16 @@ func main() {
 	shutterRegistryContractAddressStringified := os.Getenv("SHUTTER_REGISTRY_CONTRACT_ADDRESS")
 	shutterRegistryContractAddress := common.HexToAddress(shutterRegistryContractAddressStringified)
 
+	shutterEventRegistryContractAddressStringified := os.Getenv("SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS")
+	shutterEventRegistryContractAddress := common.HexToAddress(shutterEventRegistryContractAddressStringified)
+
 	keyBroadcastContractAddressStringified := os.Getenv("KEY_BROADCAST_CONTRACT_ADDRESS")
 	keyBroadcastContractAddress := common.HexToAddress(keyBroadcastContractAddressStringified)
 
 	keyperSetManagerContractAddressStringified := os.Getenv("KEYPER_SET_MANAGER_CONTRACT_ADDRESS")
 	keyperSetManagerContractAddress := common.HexToAddress(keyperSetManagerContractAddressStringified)
 
-	contract, err := shutterAPICommon.NewContract(client, shutterRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
+	contract, err := shutterAPICommon.NewContract(client, shutterRegistryContractAddress, shutterEventRegistryContractAddress, keyperSetManagerContractAddress, keyBroadcastContractAddress)
 	if err != nil {
 		log.Err(err).Msg("failed to instantiate shutter contracts")
 		return

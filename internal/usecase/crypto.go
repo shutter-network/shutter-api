@@ -466,7 +466,6 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 
 	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)
 
-	// TODO: check for already registered identities also against event based triggers!
 	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identity))
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying contract")

@@ -95,6 +95,13 @@ services:
       caddy.rate_limit_0.zone_6.match.path: "*/get_event_trigger_expiration_block*"
       caddy.rate_limit_0.zone_6.match.method: GET
 
+      caddy.rate_limit_0.zone_7: get_event_decryption_key__unauthorized
+      caddy.rate_limit_0.zone_7.key: "{remote_host}"
+      caddy.rate_limit_0.zone_7.events: 20
+      caddy.rate_limit_0.zone_7.window: 1d
+      caddy.rate_limit_0.zone_7.match.path: "*/get_event_decryption_key*"
+      caddy.rate_limit_0.zone_7.match.method: GET
+
       # Rate limits with api key
       caddy.rate_limit_1: "@withApiKey"
       caddy.rate_limit_1.log_key: " "
@@ -147,6 +154,14 @@ services:
       caddy.rate_limit_1.zone_6.window: 1d
       caddy.rate_limit_1.zone_6.match.path: "*/get_event_trigger_expiration_block*"
       caddy.rate_limit_1.zone_6.match.method: GET
+
+      caddy.rate_limit_1.zone_7: get_event_decryption_key__authorized
+      caddy.rate_limit_1.zone_7.key: "{header.Authorization}"
+      caddy.rate_limit_1.zone_7.events: 2000
+      caddy.rate_limit_1.zone_7.window: 1d
+      caddy.rate_limit_1.zone_7.match.path: "*/get_event_decryption_key*"
+      caddy.rate_limit_1.zone_7.match.method: GET
+
 
   caddy:
     build:

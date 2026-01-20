@@ -41,6 +41,44 @@ func NewCryptoService(
 
 //	@BasePath	/api
 //
+// GetEventDecryptionKey godoc
+//
+//		@Summary		Get decryption key.
+//		@Description	Retrieves a decryption key for a given registered event based identity once it was triggered. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			identity	query		string								true	"Identity associated with the decryption key."
+//		@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
+//		@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
+//		@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/get_decryption_key [get]
+func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
+	identity, ok := ctx.GetQuery("identity")
+	if !ok {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"identity query parameter is required",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	data, err := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": data,
+	})
+}
+
+//	@BasePath	/api
+//
 // GetDecryptionKey godoc
 //
 //		@Summary		Get decryption key.

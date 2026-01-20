@@ -78,6 +78,7 @@ For unauthorized access, the API on Gnosis Mainnet is rate limited with these li
   - `/get_event_trigger_expiration_block` 20 requests per 24 hours
   - `/get_data_for_encryption` 10 requests per 24 hours
   - `/get_decryption_key` 20 requests per 24 hours
+  - `/get_event_decryption_key` 20 requests per 24 hours
   - `/decrypt_commitment` 10 requests per 24 hours
 
 We recommend using Chiado for development, because there are no rate limits in place.
@@ -92,6 +93,7 @@ Authorized requests have these limits:
   - `/get_event_trigger_expiration_block` 2000 requests per 24 hours
   - `/get_data_for_encryption` 1000 requests per 24 hours
   - `/get_decryption_key` 2000 requests per 24 hours
+  - `/get_event_decryption_key` 2000 requests per 24 hours
   - `/decrypt_commitment` 1000 requests per 24 hours
 
 Authorization is done by using an `Authorization: Bearer $API_KEY` header, when calling the API.
@@ -367,7 +369,7 @@ console.log("Encrypted Commitment:", encryptedCommitment);
 
 #### 3.A Retrieve the Decryption Key
 
-After the decryption trigger conditions are met (i.e., the specified timestamp has passed), retrieve the decryption key using the `/get_decryption_key` endpoint.
+After the decryption trigger conditions are met (i.e., the specified timestamp has passed), retrieve the decryption key using the `/get_decryption_key` endpoint, or for event based decryption triggers the `get_event_decryption_key` endpoint.
 
 Refer to the Swagger documentation for detailed usage.
 

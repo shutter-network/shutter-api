@@ -54,7 +54,7 @@ func NewCryptoService(
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_decryption_key [get]
+//		@Router			/get_event_decryption_key [get]
 func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {

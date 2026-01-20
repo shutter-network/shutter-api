@@ -19,10 +19,16 @@ This guide will help you integrate Shutter's Commit and Reveal Scheme into your 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Endpoints](#endpoints)
-   - [Register an Identity with a Decryption Trigger](#1-register-an-identity-with-a-decryption-trigger)
-   - [Retrieve the Encryption Data](#2-retrieve-the-encryption-data)
-   - [Retrieve the Decryption Key](#3-retrieve-the-decryption-key)
-   - [Decrypt Commitments](#4-decrypt-commitments)
+   - [Identity Registration](#1-identity-registration)
+     - [Register an Identity with Time-based Decryption Triggers](#1a-register-an-identity-with-time-based-decryption-triggers)
+     - [Compile an Event Trigger Definition](#1b-compile-an-event-trigger-definition)
+     - [Register an Identity with Event-based Decryption Triggers](#1c-register-an-identity-with-event-based-decryption-triggers)
+     - [Get Event Trigger Identity Registration Expiration Block](#1d-get-event-trigger-identity-registration-expiration-block)
+   - [Encryption Operations](#2-encryption-operations)
+     - [Retrieve the Encryption Data](#2a-retrieve-the-encryption-data)
+   - [Decryption Operations](#3-decryption-operations)
+     - [Retrieve the Decryption Key](#3a-retrieve-the-decryption-key)
+     - [Decrypt Commitments](#3b-decrypt-commitments)
 4. [Future features](#future-features)
 5. [FAQs](#faqs)
 6. [Swagger Documentation](#swagger-documentation)
@@ -39,9 +45,11 @@ The Shutter system leverages threshold encryption, distributed cryptographic ope
 - **API**: An API that simplifies interaction with the Shutter system by exposing endpoints for encryption and decryption operations.
 
 This documentation will guide you through:
-- Setting up identities and time-based decryption triggers.
+- Setting up identities with time-based or event-based decryption triggers.
+- Compiling event trigger definitions for event-based triggers.
 - Retrieving encryption data and decryption keys.
 - Decrypting encrypted commitments.
+- Querying event identity registration expiration block.
 
 ---
 
@@ -65,6 +73,9 @@ This documentation will guide you through:
 For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip:
 
   - `/register_identity` 5 requests per 24 hours
+  - `/compile_event_trigger_definition` 20 requests per 24 hours
+  - `/register_event_identity` 5 requests per 24 hours
+  - `/get_event_trigger_expiration_block` 20 requests per 24 hours
   - `/get_data_for_encryption` 10 requests per 24 hours
   - `/get_decryption_key` 20 requests per 24 hours
   - `/decrypt_commitment` 10 requests per 24 hours
@@ -76,6 +87,9 @@ If you need higher limits, contact [loring@brainbot.com](mailto:loring@brainbot.
 Authorized requests have these limits:
 
   - `/register_identity` 500 requests per 24 hours
+  - `/compile_event_trigger_definition` 2000 requests per 24 hours
+  - `/register_event_identity` 500 requests per 24 hours
+  - `/get_event_trigger_expiration_block` 2000 requests per 24 hours
   - `/get_data_for_encryption` 1000 requests per 24 hours
   - `/get_decryption_key` 2000 requests per 24 hours
   - `/decrypt_commitment` 1000 requests per 24 hours
@@ -88,7 +102,9 @@ Use the `/check_authentication` endpoint, to test your API key.
 
 ## Endpoints
 
-### 1.A Register an Identity with Time-based Decryption Triggers
+### 1. Identity Registration
+
+#### 1.A Register an Identity with Time-based Decryption Triggers
 
 To begin using the Shutter system, register an identity and specify a time-based decryption trigger. This step links an identity to a decryption key and sets the release conditions for the key to a Unix timestamp.
 
@@ -118,33 +134,78 @@ curl -X POST https://<API_BASE_URL>/register_identity \
 }
 ```
 
-### 1.B Register an Identity with Event-based Decryption Triggers [WIP]
+### 1.B Compile an Event Trigger Definition
 
-An alternative is the upcoming feature of "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However here the decryption key is produced only when a specific EVM event has been observed by the keypers.
+An alternative to time-based decryption triggers are "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However, here the decryption key is produced only when a specific EVM event has been observed by the keypers.
 
-The trigger condition is specified by a `contract address` (mandatory), and a number of topic- or data-matchers. Event data can be matched as `byte-equals` or numeric comparisons (`<, <=, ==, >=, >`) over an uint256-cast of the specified event data fields.
+Before registering an identity with event-based decryption triggers, you need to compile an event trigger definition. This endpoint takes an event signature and arguments to create an event trigger definition that will be understood by keypers supporting event-based decryption triggers.
 
-Registered event based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if
+The trigger condition is specified by a `contract address` (mandatory), the event's signature (mandatory), and a number of additional arguments. Event data can be matched as `byte-equals` or numeric comparisons (`lt, lte, eq, gte, gt`) over an uint256-cast of the specified event data fields.
+
+Refer to the `/compile_event_trigger_definition` endpoint in the Swagger documentation for details on parameters and responses.
+
+#### Example Request
+```bash
+curl -X POST https://<API_BASE_URL>/compile_event_trigger_definition \
+-H "Content-Type: application/json" \
+-d '{
+  "contract": "0x3465a347342B72BCf800aBf814324ba4a803c32b",
+  "eventSig": "Transfer(indexed from address, indexed to address, amount uint256)",
+  "arguments": [
+    {
+      "name": "from",
+      "op": "eq",
+      "bytes": "0x456d9347342B72BCf800bBf117391ac2f807c6bF"
+    },
+    {
+      "name": "amount",
+      "op": "gte",
+      "number": 25433
+    }
+  ]
+}'
+```
+
+#### Example Response
+```json
+{
+  "trigger_definition": "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+}
+```
+
+> **Note**: The object format for the "arguments" list is:
+> - `name`: The matching argument name from the event signature
+> - `op`: One of `lt`, `lte`, `eq`, `gte`, `gt` for comparison operations
+> - `number`: Integer argument for numeric comparisons
+> - `bytes`: Hex-encoded byte argument for non-numeric matches with `op == "eq"`
+> 
+> The resulting condition for the trigger is a logical AND of all arguments given.
+
+### 1.C Register an Identity with Event-based Decryption Triggers
+
+In order to register, you need a compiled event trigger definition (created using `/compile_event_trigger_definition`, see above). Registered event-based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if:
 
 - the release condition has not been met before (since registration)
 - the `ttl` timer has not run out, and
 - *all* conditions of the trigger definition were fulfilled.
 
+Refer to the `/register_event_identity` endpoint in the Swagger documentation for details on parameters and responses.
 
-> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
-> [ShutterEventRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
+> **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. For the time being, it is **not** possibly to register event based decryption triggers directly with the contract. The contract's definition can be found here:
+> [ShutterEventTriggerRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
 
 #### Example Request
 ```bash
 curl -X POST https://<API_BASE_URL>/register_event_identity \
 -H "Content-Type: application/json" \
 -d '{
-  "eventDefinition": "0x808ba62b3fb085eae2e58888828d5aa5d0d8d3cc44dcb1750e3664468a1288c38501d8d9e5d89930656b6ce9aa13b6a311031b89963b83d95588e26e5e8a9aeef2b9c1b07740d24bbd7aef9935fde194e05aff41fe6e3529de9a4b81779ddf4bed488b753efabe29aa7407bf131a7f744f2cf0429b0a200b1d369791fae3c740d62edd422b649a41660a6f0bd4310ecad617fb8ba626970934bd473c4dcc7784fac7ed66c4576590c76e70af4f3d99ea1361669349beb8cbb3346e9cc821435d",
-  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
+  "triggerDefinition": "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402",
+  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c",
+  "ttl": 100
 }'
 ```
 
-> **Note**: The encoding of `eventDefinition` is specified in [rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/spec.md). It is a concatenation of contract address and the rlp encoding of all conditions. Event definitions should be constructed by using provided tooling (WIP).
+> **Note**: The encoding of `eventDefinition` is specified in [rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/spec.md). It is a concatenation of contract address and the rlp encoding of all conditions. Event definitions should be constructed by using provided tooling (i.e. `/compile_event_trigger_definition` endpoint or `etdc` utility).
 
 #### Example Response
 ```json
@@ -152,20 +213,53 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
   "eon": 1,
   "eon_key": "0x9348cbe5372c1b467bfe60d6c678bbe1aed74a90b93f857b2db1b6a5dac5cd95",
   "identity": "0xdfb9b97b2ff057a1fdff173e10e974ffb16c28105f0524b33e8a6906c6c81dc0",
-  "identityPrefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c",
+  "identity_prefix": "0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c",
   "tx_hash": "0xf7cb7ef13edee67735bba17d5ff84546a1ac7547b3d2a9f1d15e4d1b2e9f303c"
 }
 ```
 
-### 2. Retrieve the Encryption Data
+> **Note**: The encoding of `triggerDefinition` is specified [in rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/event.md). It is a concatenation of contract address, topic0 and the RLP encoding of the other conditions. Event definitions should be constructed using the `/compile_event_trigger_definition` endpoint.
 
-To encrypt commitments, obtain the encryption data associated with your identity. Use the `/get_data_for_encryption` endpoint to retrieve all necessary encryption data.
+### 1.D Get Event Trigger Identity Registration Expiration Block
 
-Refer to the Swagger documentation for specifics on this endpoint.
+Retrieve the expiration block number for a given event trigger identity registration. This endpoint allows you to check the expiration block number for an event-based identity registration.
+
+Refer to the `/get_event_trigger_expiration_block` endpoint in the Swagger documentation for details on parameters and responses.
 
 #### Example Request
 ```bash
+curl -X GET "https://<API_BASE_URL>/get_event_trigger_expiration_block?eon=1&identityPrefix=0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
+```
+
+#### Example Response
+```json
+{
+  "expiration_block_number": 5678967
+}
+```
+
+> **Note**: If the event identity registration is not found, the endpoint will return a 404 error.
+
+### 2. Encryption Operations
+
+#### 2.A Retrieve the Encryption Data
+
+To encrypt commitments, obtain the encryption data associated with your identity. Use the `/get_data_for_encryption` endpoint to retrieve all necessary encryption data.
+
+This endpoint supports both time-based and event-based identity computation:
+- For **Time-based**: Omit the `triggerDefinition` parameter.
+- For **Event-based**: Provide the `triggerDefinition` parameter (hex-encoded with 0x prefix) as well to compute identity for event-based triggers.
+
+Refer to the Swagger documentation for specifics on this endpoint.
+
+#### Example Request (Time-based)
+```bash
 curl -X GET "https://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+```
+
+#### Example Request (Event-based)
+```bash
+curl -X GET "https://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0&triggerDefinition=0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
 ```
 
 #### Example Response
@@ -269,7 +363,9 @@ const encryptedCommitment = await encryptData(message, eonPublicKey, identityPre
 console.log("Encrypted Commitment:", encryptedCommitment);
 ```
 
-### 3. Retrieve the Decryption Key
+### 3. Decryption Operations
+
+#### 3.A Retrieve the Decryption Key
 
 After the decryption trigger conditions are met (i.e., the specified timestamp has passed), retrieve the decryption key using the `/get_decryption_key` endpoint.
 
@@ -289,7 +385,7 @@ curl -X GET "https://<API_BASE_URL>/get_decryption_key?identity=0x8c232eae4f9572
 }
 ```
 
-### 4. Decrypt Commitments
+#### 3.B Decrypt Commitments
 
 Once you have the decryption key, use it to decrypt commitments encrypted with the Shutter system. The `/decrypt_commitment` endpoint enables this process.
 
@@ -313,8 +409,8 @@ The decrypted message is returned in its hex format. To get the initial message,
 
 ## Future Features
 
-- **Event-Based and Block-Based Triggers**
-  Future versions of the Shutter system will support event-based and block-based decryption triggers for enhanced functionality.
+- **Block-Based Triggers**
+  Future versions of the Shutter system will support block-based decryption triggers for enhanced functionality.
 
 - **Real-Time Notifications**
   Planned updates include WebSocket-based notifications for real-time key releases, improving user experience and interactivity.

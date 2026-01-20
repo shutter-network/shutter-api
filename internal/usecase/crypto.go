@@ -13,7 +13,9 @@ import (
 	cryptorand "crypto/rand"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ecommon "github.com/ethereum/go-ethereum/common"
 	ethCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
@@ -40,6 +42,10 @@ type ShutterregistryInterface interface {
 	Register(opts *bind.TransactOpts, eon uint64, identityPrefix [32]byte, timestamp uint64) (*types.Transaction, error)
 }
 
+type ShutterEventregistryInterface interface {
+	Register(opts *bind.TransactOpts, eon uint64, identityPrefix [32]byte, triggerDefinition []byte, ttl uint64) (*types.Transaction, error)
+}
+
 type KeyperSetManagerInterface interface {
 	GetKeyperSetIndexByBlock(opts *bind.CallOpts, blockNumber uint64) (uint64, error)
 }
@@ -51,6 +57,7 @@ type KeyBroadcastInterface interface {
 type EthClientInterface interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	ChainID(ctx context.Context) (*big.Int, error)
+	TransactionReceipt(ctx context.Context, txHash ecommon.Hash) (*types.Receipt, error)
 }
 
 type GetDecryptionKeyResponse struct {
@@ -76,31 +83,34 @@ type RegisterIdentityResponse struct {
 } // @name RegisterIdentityResponse
 
 type CryptoUsecase struct {
-	db                       *pgxpool.Pool
-	dbQuery                  *data.Queries
-	shutterRegistryContract  ShutterregistryInterface
-	keyperSetManagerContract KeyperSetManagerInterface
-	keyBroadcastContract     KeyBroadcastInterface
-	ethClient                EthClientInterface
-	config                   *common.Config
+	db                           *pgxpool.Pool
+	dbQuery                      *data.Queries
+	shutterRegistryContract      ShutterregistryInterface
+	shutterEventRegistryContract ShutterEventregistryInterface
+	keyperSetManagerContract     KeyperSetManagerInterface
+	keyBroadcastContract         KeyBroadcastInterface
+	ethClient                    EthClientInterface
+	config                       *common.Config
 }
 
 func NewCryptoUsecase(
 	db *pgxpool.Pool,
 	shutterRegistryContract ShutterregistryInterface,
+	shutterEventRegistryContract ShutterEventregistryInterface,
 	keyperSetManagerContract KeyperSetManagerInterface,
 	keyBroadcastContract KeyBroadcastInterface,
 	ethClient EthClientInterface,
 	config *common.Config,
 ) *CryptoUsecase {
 	return &CryptoUsecase{
-		db:                       db,
-		dbQuery:                  data.New(db),
-		shutterRegistryContract:  shutterRegistryContract,
-		keyperSetManagerContract: keyperSetManagerContract,
-		keyBroadcastContract:     keyBroadcastContract,
-		ethClient:                ethClient,
-		config:                   config,
+		db:                           db,
+		dbQuery:                      data.New(db),
+		shutterRegistryContract:      shutterRegistryContract,
+		shutterEventRegistryContract: shutterEventRegistryContract,
+		keyperSetManagerContract:     keyperSetManagerContract,
+		keyBroadcastContract:         keyBroadcastContract,
+		ethClient:                    ethClient,
+		config:                       config,
 	}
 }
 
@@ -210,7 +220,7 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 	}, nil
 }
 
-func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address string, identityPrefixStringified string) (*GetDataForEncryptionResponse, *httpError.Http) {
+func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address string, identityPrefixStringified string, triggerDefinitionHex string) (*GetDataForEncryptionResponse, *httpError.Http) {
 	if !ethCommon.IsHexAddress(address) {
 		log.Warn().Str("address", address).Msg("invalid address")
 		err := httpError.NewHttpError(
@@ -306,7 +316,30 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 		return nil, &err
 	}
 
-	identity := common.ComputeIdentity(identityPrefix[:], ethCommon.HexToAddress(address))
+	var identity []byte
+	if len(triggerDefinitionHex) > 0 {
+		// Event-based identity computation: hash(prefix + sender + triggerDefinition)
+		triggerDefinitionBytes, err := hexutil.Decode(triggerDefinitionHex)
+		if err != nil {
+			log.Err(err).Msg("err encountered while decoding trigger definition")
+			err := httpError.NewHttpError(
+				"error encountered while decoding trigger definition",
+				"",
+				http.StatusBadRequest,
+			)
+			return nil, &err
+		}
+		if len(triggerDefinitionBytes) == 0 {
+			err := fmt.Errorf("invalid triggerDefinition '%v'", triggerDefinitionHex)
+			log.Err(err).Msg("err encountered while decoding trigger definition")
+			errr := httpError.NewHttpError(err.Error(), "", http.StatusBadRequest)
+			return nil, &errr
+		}
+		identity = common.ComputeEventIdentity(identityPrefix[:], ethCommon.HexToAddress(address), triggerDefinitionBytes)
+	} else {
+		// Time-based identity computation: hash(prefix + sender)
+		identity = common.ComputeIdentity(identityPrefix[:], ethCommon.HexToAddress(address))
+	}
 	epochID := shcrypto.ComputeEpochID(identity)
 	return &GetDataForEncryptionResponse{
 		Eon:            eon,

@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install build-essential and other necessary packages
 RUN apk add --no-cache build-base

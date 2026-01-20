@@ -178,6 +178,11 @@ paths:
         name: encryptedCommitment
         required: true
         type: string
+      - description: Optional eon parameter for the identity.
+        format: int64
+        in: query
+        name: eon
+        type: integer
       produces:
       - application/json
       responses:
@@ -270,6 +275,50 @@ paths:
         name: identity
         required: true
         type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success.
+          schema:
+            $ref: '#/definitions/GetDecryptionKey'
+        "400":
+          description: Invalid Get decryption key request.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "404":
+          description: Decryption key not found for the associated identity.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "500":
+          description: Internal server error.
+          schema:
+            $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
+      summary: Get decryption key.
+      tags:
+      - Crypto
+  /get_event_decryption_key:
+    get:
+      description: Retrieves a decryption key for a given registered event based identity
+        once it was triggered. Decryption key is 0x padded, clients need to remove
+        the prefix when decrypting on their end.
+      parameters:
+      - description: Identity associated with the decryption key.
+        in: query
+        name: identity
+        required: true
+        type: string
+      - description: Optional eon parameter for the identity.
+        format: int64
+        in: query
+        name: eon
+        type: integer
       produces:
       - application/json
       responses:

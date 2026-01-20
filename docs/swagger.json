@@ -89,6 +89,13 @@
                         "name": "encryptedCommitment",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Optional eon parameter for the identity.",
+                        "name": "eon",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -209,6 +216,71 @@
                         "name": "identity",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetDecryptionKey"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get decryption key request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "404": {
+                        "description": "Decryption key not found for the associated identity.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/get_event_decryption_key": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves a decryption key for a given registered event based identity once it was triggered. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Get decryption key.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Identity associated with the decryption key.",
+                        "name": "identity",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Optional eon parameter for the identity.",
+                        "name": "eon",
+                        "in": "query"
                     }
                 ],
                 "responses": {

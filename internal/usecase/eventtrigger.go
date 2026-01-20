@@ -519,7 +519,7 @@ func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon
 	}, nil
 }
 
-func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
+func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity string, eon int64) (*GetDecryptionKeyResponse, *httpError.Http) {
 	identityBytes, err := hex.DecodeString(strings.TrimPrefix(string(identity), "0x"))
 	if err != nil {
 		log.Err(err).Msg("err encountered while decoding identity")
@@ -541,30 +541,33 @@ func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity str
 		return nil, &err
 	}
 
-	blockNumber, err := uc.ethClient.BlockNumber(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for recent block",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
+	if eon < 0 {
+		blockNumber, err := uc.ethClient.BlockNumber(ctx)
+		if err != nil {
+			log.Err(err).Msg("err encountered while querying for recent block")
+			metrics.TotalFailedRPCCalls.Inc()
+			err := httpError.NewHttpError(
+				"error encountered while querying for recent block",
+				"",
+				http.StatusInternalServerError,
+			)
+			return nil, &err
+		}
 
-	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying current eon")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying current eon",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
+		eonUint, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
+		if err != nil {
+			log.Err(err).Msg("err encountered while querying current eon")
+			metrics.TotalFailedRPCCalls.Inc()
+			err := httpError.NewHttpError(
+				"error encountered while querying current eon",
+				"",
+				http.StatusInternalServerError,
+			)
+			return nil, &err
+		}
+		eon = int64(eonUint)
 
+	}
 	arg := data.GetDecryptionKeyParams{
 		EpochID: []byte(identityBytes),
 		Eon:     int64(eon),

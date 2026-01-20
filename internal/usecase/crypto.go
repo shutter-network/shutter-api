@@ -526,7 +526,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	}, nil
 }
 
-func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitment string, identity string) (string, *httpError.Http) {
+func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitment string, identity string, eon int64) (string, *httpError.Http) {
 	if len(encryptedCommitment) == 0 {
 		log.Debug().Msg("empty encrypted commitment")
 		err := httpError.NewHttpError(
@@ -547,8 +547,8 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 		return "", &err
 	}
 
-	decKeyResponse, httpErr := uc.GetEventDecryptionKey(ctx, identity)
-	if httpErr.StatusCode == http.StatusNotFound {
+	decKeyResponse, httpErr := uc.GetEventDecryptionKey(ctx, identity, eon)
+	if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
 		decKeyResponse, httpErr = uc.GetDecryptionKey(ctx, identity)
 	}
 	if httpErr != nil {

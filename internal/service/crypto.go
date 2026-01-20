@@ -48,6 +48,7 @@ func NewCryptoService(
 //		@Tags			Crypto
 //		@Produce		json
 //		@Param			identity	query		string								true	"Identity associated with the decryption key."
+//		@Param			eon			query		int64		false	"Optional eon parameter for the identity."
 //		@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
 //		@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
 //		@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
@@ -67,7 +68,22 @@ func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
 		return
 	}
 
-	data, err := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity)
+	eon := int64(-1)
+	eonArg, ok := ctx.GetQuery("eon")
+	var err error
+	if ok {
+		eon, err = strconv.ParseInt(eonArg, 10, 64)
+		if err != nil {
+			err := sherror.NewHttpError(
+				"query parameter invalid",
+				"eon query parameter could not be parsed",
+				http.StatusBadRequest,
+			)
+			ctx.Error(err)
+			return
+		}
+	}
+	data, err := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity, eon)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -213,6 +229,7 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 //		@Produce		json
 //		@Param			identity			query		string		true	"Identity used for registration and encrypting the message."
 //		@Param			encryptedCommitment	query		string		true	"Encrypted commitment is the clients encrypted message."
+//		@Param			eon					query		int64		false	"Optional eon parameter for the identity."
 //		@Success		200					{object}	[]byte		"Success."
 //		@Failure		400					{object}	error.Http	"Invalid Decrypt commitment request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
@@ -241,8 +258,23 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 		ctx.Error(err)
 		return
 	}
+	eon := int64(-1)
+	eonArg, ok := ctx.GetQuery("eon")
+	var err error
+	if ok {
+		eon, err = strconv.ParseInt(eonArg, 10, 64)
+		if err != nil {
+			err := sherror.NewHttpError(
+				"query parameter invalid",
+				"eon query parameter could not be parsed",
+				http.StatusBadRequest,
+			)
+			ctx.Error(err)
+			return
+		}
+	}
 
-	data, err := svc.CryptoUsecase.DecryptCommitment(ctx, encryptedCommitment, identity)
+	data, err := svc.CryptoUsecase.DecryptCommitment(ctx, encryptedCommitment, identity, eon)
 	if err != nil {
 		ctx.Error(err)
 		return

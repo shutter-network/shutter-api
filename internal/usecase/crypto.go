@@ -547,7 +547,10 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 		return "", &err
 	}
 
-	decKeyResponse, httpErr := uc.GetDecryptionKey(ctx, identity)
+	decKeyResponse, httpErr := uc.GetEventDecryptionKey(ctx, identity)
+	if httpErr.StatusCode == http.StatusNotFound {
+		decKeyResponse, httpErr = uc.GetDecryptionKey(ctx, identity)
+	}
 	if httpErr != nil {
 		return "", httpErr
 	}

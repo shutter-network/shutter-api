@@ -76,7 +76,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.",
+                "description": "Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. The trigger condition for the decryption key (timestamp or event) to be released must have been met for the message to be decrypted successfully.",
                 "produces": [
                     "application/json"
                 ],
@@ -87,7 +87,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Identity used for registeration and encrypting the message.",
+                        "description": "Identity used for registration and encrypting the message.",
                         "name": "identity",
                         "in": "query",
                         "required": true

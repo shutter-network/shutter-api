@@ -254,7 +254,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 
 //	@BasePath	/api
 //
-// EventTriggerDefinition godoc
+// CompileEventTriggerDefinition godoc
 //
 //	@Summary		Allows clients to compile an event trigger definition string.
 //	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers

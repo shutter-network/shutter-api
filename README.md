@@ -136,6 +136,8 @@ curl -X POST https://<API_BASE_URL>/register_identity \
 
 ### 1.B Compile an Event Trigger Definition
 
+An alternative to time-based decryption triggers are "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However, here the decryption key is produced only when a specific EVM event has been observed by the keypers.
+
 Before registering an identity with event-based decryption triggers, you need to compile an event trigger definition. This endpoint takes an event signature and arguments to create an event trigger definition that will be understood by keypers supporting event-based decryption triggers.
 
 The trigger condition is specified by a `contract address` (mandatory), the event's signature (mandatory), and a number of additional arguments. Event data can be matched as `byte-equals` or numeric comparisons (`lt, lte, eq, gte, gt`) over an uint256-cast of the specified event data fields.
@@ -181,9 +183,7 @@ curl -X POST https://<API_BASE_URL>/compile_event_trigger_definition \
 
 ### 1.C Register an Identity with Event-based Decryption Triggers
 
-An alternative to time-based decryption triggers is "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However, here the decryption key is produced only when a specific EVM event has been observed by the keypers.
-
-The trigger condition is specified by a compiled event trigger definition (created using `/compile_event_trigger_definition`). Registered event-based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if:
+In order to register, you need a compiled event trigger definition (created using `/compile_event_trigger_definition`, see above). Registered event-based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if:
 
 - the release condition has not been met before (since registration)
 - the `ttl` timer has not run out, and
@@ -204,6 +204,8 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
   "ttl": 100
 }'
 ```
+
+> **Note**: The encoding of `eventDefinition` is specified in [rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/spec.md). It is a concatenation of contract address and the rlp encoding of all conditions. Event definitions should be constructed by using provided tooling (i.e. `/compile_event_trigger_definition` endpoint or `etdc` utility).
 
 #### Example Response
 ```json

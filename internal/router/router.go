@@ -35,6 +35,7 @@ func NewRouter(
 	api := router.Group("/api")
 	{
 		api.GET("/get_decryption_key", cryptoService.GetDecryptionKey)
+		api.GET("/get_event_decryption_key", cryptoService.GetEventDecryptionKey)
 		api.GET("/get_data_for_encryption", cryptoService.GetDataForEncryption)
 		api.POST("/register_identity", cryptoService.RegisterIdentity)
 		api.POST("/compile_event_trigger_definition", cryptoService.CompileEventTriggerDefinition)

@@ -76,7 +76,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.",
+                "description": "Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. The trigger condition for the decryption key (timestamp or event) to be released must have been met for the message to be decrypted successfully.",
                 "produces": [
                     "application/json"
                 ],
@@ -87,7 +87,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Identity used for registeration and encrypting the message.",
+                        "description": "Identity used for registration and encrypting the message.",
                         "name": "identity",
                         "in": "query",
                         "required": true
@@ -98,6 +98,13 @@ const docTemplate = `{
                         "name": "encryptedCommitment",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Optional eon parameter for the identity.",
+                        "name": "eon",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -106,7 +113,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int32"
                             }
                         }
                     },
@@ -149,7 +157,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
+                        "description": "Ethereum address associated with the identity. Time‑based: use the address that will register the identity (your account if self‑registering, or the API signer address below if you are using the API register endpoint). Event‑based (triggerDefinition provided): users cannot self‑register because the registry is owner‑only, please use the API signer address below. Gnosis Mainnet API address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc Chiado API address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
                         "name": "address",
                         "in": "query",
                         "required": true
@@ -253,6 +261,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/get_event_decryption_key": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves a decryption key for a given registered event based identity once it was triggered. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Get decryption key.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Identity associated with the decryption key.",
+                        "name": "identity",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Optional eon parameter for the identity.",
+                        "name": "eon",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetDecryptionKey"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get decryption key request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "404": {
+                        "description": "Decryption key not found for the associated identity.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
         "/get_event_trigger_expiration_block": {
             "get": {
                 "security": [
@@ -271,6 +344,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Eon number associated with the event identity registration.",
                         "name": "eon",
                         "in": "query",
@@ -280,13 +354,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Identity prefix associated with the event identity registration.",
                         "name": "identityPrefix",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Ethereum address associated with the identity. For gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
-                        "name": "address",
                         "in": "query",
                         "required": true
                     }
@@ -586,8 +653,8 @@ const docTemplate = `{
                     "example": "amount"
                 },
                 "number": {
-                    "type": "integer",
-                    "example": 25433
+                    "type": "string",
+                    "example": "25433"
                 },
                 "op": {
                     "type": "string",

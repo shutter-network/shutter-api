@@ -41,6 +41,60 @@ func NewCryptoService(
 
 //	@BasePath	/api
 //
+// GetEventDecryptionKey godoc
+//
+//		@Summary		Get decryption key.
+//		@Description	Retrieves a decryption key for a given registered event based identity once it was triggered. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			identity	query		string								true	"Identity associated with the decryption key."
+//		@Param			eon			query		int64		false	"Optional eon parameter for the identity."
+//		@Success		200			{object}	usecase.GetDecryptionKeyResponse	"Success."
+//		@Failure		400			{object}	error.Http							"Invalid Get decryption key request."
+//		@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/get_event_decryption_key [get]
+func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
+	identity, ok := ctx.GetQuery("identity")
+	if !ok {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"identity query parameter is required",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	eon := int64(-1)
+	eonArg, ok := ctx.GetQuery("eon")
+	var err error
+	if ok {
+		eon, err = strconv.ParseInt(eonArg, 10, 64)
+		if err != nil {
+			err := sherror.NewHttpError(
+				"query parameter invalid",
+				"eon query parameter could not be parsed",
+				http.StatusBadRequest,
+			)
+			ctx.Error(err)
+			return
+		}
+	}
+	data, err := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity, eon)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": data,
+	})
+}
+
+//	@BasePath	/api
+//
 // GetDecryptionKey godoc
 //
 //		@Summary		Get decryption key.
@@ -170,11 +224,12 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 // DecryptCommitment godoc
 //
 //		@Summary		Allows clients to decrypt their encrypted message.
-//		@Description	Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. Timestamp with which the identity was registered should have been passed for the message to be decrypted successfully.
+//		@Description	Provides a way for clients to easily decrypt their encrypted message for which they have registered the identity for. The trigger condition for the decryption key (timestamp or event) to be released must have been met for the message to be decrypted successfully.
 //		@Tags			Crypto
 //		@Produce		json
-//		@Param			identity			query		string		true	"Identity used for registeration and encrypting the message."
+//		@Param			identity			query		string		true	"Identity used for registration and encrypting the message."
 //		@Param			encryptedCommitment	query		string		true	"Encrypted commitment is the clients encrypted message."
+//		@Param			eon					query		int64		false	"Optional eon parameter for the identity."
 //		@Success		200					{object}	[]byte		"Success."
 //		@Failure		400					{object}	error.Http	"Invalid Decrypt commitment request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
@@ -203,8 +258,23 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 		ctx.Error(err)
 		return
 	}
+	eon := int64(-1)
+	eonArg, ok := ctx.GetQuery("eon")
+	var err error
+	if ok {
+		eon, err = strconv.ParseInt(eonArg, 10, 64)
+		if err != nil {
+			err := sherror.NewHttpError(
+				"query parameter invalid",
+				"eon query parameter could not be parsed",
+				http.StatusBadRequest,
+			)
+			ctx.Error(err)
+			return
+		}
+	}
 
-	data, err := svc.CryptoUsecase.DecryptCommitment(ctx, encryptedCommitment, identity)
+	data, err := svc.CryptoUsecase.DecryptCommitment(ctx, encryptedCommitment, identity, eon)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -216,7 +286,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 
 //	@BasePath	/api
 //
-// EventTriggerDefinition godoc
+// CompileEventTriggerDefinition godoc
 //
 //	@Summary		Allows clients to compile an event trigger definition string.
 //	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers

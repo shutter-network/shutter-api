@@ -518,3 +518,105 @@ func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon
 		ExpirationBlockNumber: uint64(expirationBlockNumber),
 	}, nil
 }
+
+func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity string, eon int64) (*GetDecryptionKeyResponse, *httpError.Http) {
+	identityBytes, err := hex.DecodeString(strings.TrimPrefix(string(identity), "0x"))
+	if err != nil {
+		log.Err(err).Msg("err encountered while decoding identity")
+		err := httpError.NewHttpError(
+			"error encountered while decoding identity",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	if len(identityBytes) != 32 {
+		log.Err(err).Msg("identity should be of length 32")
+		err := httpError.NewHttpError(
+			"identity should be of length 32",
+			"",
+			http.StatusBadRequest,
+		)
+		return nil, &err
+	}
+
+	if eon < 0 {
+		blockNumber, err := uc.ethClient.BlockNumber(ctx)
+		if err != nil {
+			log.Err(err).Msg("err encountered while querying for recent block")
+			metrics.TotalFailedRPCCalls.Inc()
+			err := httpError.NewHttpError(
+				"error encountered while querying for recent block",
+				"",
+				http.StatusInternalServerError,
+			)
+			return nil, &err
+		}
+
+		eonUint, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
+		if err != nil {
+			log.Err(err).Msg("err encountered while querying current eon")
+			metrics.TotalFailedRPCCalls.Inc()
+			err := httpError.NewHttpError(
+				"error encountered while querying current eon",
+				"",
+				http.StatusInternalServerError,
+			)
+			return nil, &err
+		}
+		eon = int64(eonUint)
+
+	}
+	arg := data.GetDecryptionKeyParams{
+		EpochID: []byte(identityBytes),
+		Eon:     int64(eon),
+	}
+
+	var decryptionKey string
+
+	decKey, err := uc.dbQuery.GetDecryptionKey(ctx, arg)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// no data found try querying from other keyper via http
+			decKey, err := uc.getDecryptionKeyFromExternalKeyper(ctx, int64(arg.Eon), identity)
+			if err != nil {
+				err := httpError.NewHttpError(
+					err.Error(),
+					"",
+					http.StatusInternalServerError,
+				)
+				return nil, &err
+			}
+			if decKey == "" {
+				err := httpError.NewHttpError(
+					"decryption key doesn't exist",
+					"",
+					http.StatusNotFound,
+				)
+				return nil, &err
+			}
+			decryptionKey = decKey
+		} else {
+			log.Err(err).Msg("err encountered while querying db")
+			err := httpError.NewHttpError(
+				"error while querying db",
+				"",
+				http.StatusInternalServerError,
+			)
+			return nil, &err
+		}
+	} else {
+		decryptionKey = common.PrefixWith0x(hex.EncodeToString(decKey.DecryptionKey))
+	}
+
+	if !strings.HasPrefix(identity, "0x") {
+		identity = common.PrefixWith0x(identity)
+	}
+
+	return &GetDecryptionKeyResponse{
+		DecryptionKey:       decryptionKey,
+		Identity:            identity,
+		DecryptionTimestamp: 0, // FIXME: ensure, we can fill timestamp for event based keys
+	}, nil
+}

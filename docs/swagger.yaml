@@ -105,8 +105,8 @@ definitions:
         example: amount
         type: string
       number:
-        example: 25433
-        type: integer
+        example: "25433"
+        type: string
       op:
         example: gte
         type: string
@@ -164,11 +164,11 @@ paths:
   /decrypt_commitment:
     get:
       description: Provides a way for clients to easily decrypt their encrypted message
-        for which they have registered the identity for. Timestamp with which the
-        identity was registered should have been passed for the message to be decrypted
-        successfully.
+        for which they have registered the identity for. The trigger condition for
+        the decryption key (timestamp or event) to be released must have been met
+        for the message to be decrypted successfully.
       parameters:
-      - description: Identity used for registeration and encrypting the message.
+      - description: Identity used for registration and encrypting the message.
         in: query
         name: identity
         required: true
@@ -178,6 +178,11 @@ paths:
         name: encryptedCommitment
         required: true
         type: string
+      - description: Optional eon parameter for the identity.
+        format: int64
+        in: query
+        name: eon
+        type: integer
       produces:
       - application/json
       responses:
@@ -185,6 +190,7 @@ paths:
           description: Success.
           schema:
             items:
+              format: int32
               type: integer
             type: array
         "400":
@@ -211,10 +217,12 @@ paths:
         If triggerDefinition is provided, the identity will be computed for event-based
         triggers. Otherwise, it uses time-based identity computation.
       parameters:
-      - description: 'Ethereum address associated with the identity. If you are registering
-          the identity yourself, pass the address of the account making the registration.
-          If you want the API to register the identity on gnosis mainnet, pass the
-          address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the
+      - description: 'Ethereum address associated with the identity. Time‑based: use
+          the address that will register the identity (your account if self‑registering,
+          or the API signer address below if you are using the API register endpoint).
+          Event‑based (triggerDefinition provided): users cannot self‑register because
+          the registry is owner‑only, please use the API signer address below. Gnosis
+          Mainnet API address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc Chiado API
           address: 0xb9C303443c9af84777e60D5C987AbF0c43844918'
         in: query
         name: address
@@ -295,12 +303,57 @@ paths:
       summary: Get decryption key.
       tags:
       - Crypto
+  /get_event_decryption_key:
+    get:
+      description: Retrieves a decryption key for a given registered event based identity
+        once it was triggered. Decryption key is 0x padded, clients need to remove
+        the prefix when decrypting on their end.
+      parameters:
+      - description: Identity associated with the decryption key.
+        in: query
+        name: identity
+        required: true
+        type: string
+      - description: Optional eon parameter for the identity.
+        format: int64
+        in: query
+        name: eon
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success.
+          schema:
+            $ref: '#/definitions/GetDecryptionKey'
+        "400":
+          description: Invalid Get decryption key request.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "404":
+          description: Decryption key not found for the associated identity.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "429":
+          description: Too many requests. Rate limited.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "500":
+          description: Internal server error.
+          schema:
+            $ref: '#/definitions/error.Http'
+      security:
+      - BearerAuth: []
+      summary: Get decryption key.
+      tags:
+      - Crypto
   /get_event_trigger_expiration_block:
     get:
       description: Retrieves the expiration block number for a given event identity
         registration.
       parameters:
       - description: Eon number associated with the event identity registration.
+        format: int64
         in: query
         name: eon
         required: true

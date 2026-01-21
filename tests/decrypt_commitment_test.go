@@ -42,7 +42,7 @@ func (s *TestShutterService) TestDecryptionCommitmentNotFound() {
 
 	identityStringified := hex.EncodeToString(identity)
 	encryptedCommitmentStringified := hex.EncodeToString(encrypedCommitmentBytes)
-	_, err = s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified)
+	_, err = s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified, -1)
 	s.Require().Error(err)
 }
 
@@ -80,7 +80,7 @@ func (s *TestShutterService) TestDecryptionCommitment() {
 
 	identityStringified := hex.EncodeToString(identity)
 	encryptedCommitmentStringified := "0x" + hex.EncodeToString(encrypedCommitmentBytes)
-	decryptedCommitment, err := s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified)
+	decryptedCommitment, err := s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified, -1)
 	s.Require().Nil(err)
 	dec, err := hex.DecodeString(strings.TrimPrefix(decryptedCommitment, "0x"))
 	s.Require().Nil(err)

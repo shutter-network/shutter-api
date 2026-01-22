@@ -83,9 +83,9 @@ func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
 			return
 		}
 	}
-	data, err := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity, eon)
-	if err != nil {
-		ctx.Error(err)
+	data, httpErr := svc.CryptoUsecase.GetEventDecryptionKey(ctx, identity, eon)
+	if httpErr != nil {
+		ctx.Error(httpErr)
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{

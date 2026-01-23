@@ -127,6 +127,19 @@ func Topic0(sig sigparser.Signature) shs.LogPredicate {
 	return lp
 }
 
+// indexedOffsetsForInputs returns topic offsets for indexed inputs in ABI order.
+func indexedOffsetsForInputs(inputs []sigparser.Parameter) []uint64 {
+	indexedOffsets := make([]uint64, len(inputs))
+	indexedCount := uint64(0)
+	for i, input := range inputs {
+		if input.Indexed {
+			indexedOffsets[i] = 1 + indexedCount
+			indexedCount++
+		}
+	}
+	return indexedOffsets
+}
+
 func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, error) {
 	lps := []shs.LogPredicate{}
 	sig, err := sigparser.ParseSignature(evtSig)
@@ -135,7 +148,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 	}
 	lp := Topic0(sig)
 	lps = append(lps, lp)
-	indexedOffset := uint64(1)
+	indexedOffsets := indexedOffsetsForInputs(sig.Inputs)
 	nonIndexedOffset := uint64(4)
 	length := uint64(0)
 	argnames := make([]string, len(args))
@@ -158,7 +171,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 		}
 		argnames[i] = arg.Name
 	}
-	for _, input := range sig.Inputs {
+	for inputIndex, input := range sig.Inputs {
 		lp := shs.LogPredicate{}
 		i := slices.IndexFunc(
 			args,
@@ -180,8 +193,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 				}
 				lp.ValuePredicate.Op = shs.BytesEq
 				lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-				lp.LogValueRef.Offset = indexedOffset
-				indexedOffset++
+				lp.LogValueRef.Offset = indexedOffsets[inputIndex]
 				// input is data argument:
 			} else {
 				if input.Type != "uint256" {

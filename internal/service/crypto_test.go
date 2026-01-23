@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	sigparser "github.com/defiweb/go-sigparser"
+	"github.com/defiweb/go-sigparser"
 	"github.com/ethereum/go-ethereum/common"
-	hexutil "github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gin-gonic/gin"
 	shs "github.com/shutter-network/rolling-shutter/rolling-shutter/keyperimpl/shutterservice"
 	shcommon "github.com/shutter-network/shutter-api/common"
@@ -54,50 +54,83 @@ func TestEventDecryptionValidation(t *testing.T) {
 
 func TestEventDecryptionData(t *testing.T) {
 	router := setupRouter()
-	bites := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": "1"}]}`
-	w := httptest.NewRecorder()
-	fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
-	assert.NilError(t, err, "hex decode failed")
-	var req usecase.EventTriggerDefinitionRequest
-	err = json.NewDecoder(strings.NewReader(bites)).Decode(&req)
-	assert.NilError(t, err, "invalid json")
-	sig, err := sigparser.ParseSignature(req.EventSignature)
-	g := shs.EventTriggerDefinition{
-		Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
-		LogPredicates: []shs.LogPredicate{
-			usecase.Topic0(sig),
-			{
-				LogValueRef: shs.LogValueRef{
-					Offset: 1,
-					Length: 1,
-				},
-				ValuePredicate: shs.ValuePredicate{
-					Op:       shs.BytesEq,
-					ByteArgs: [][]byte{usecase.Align(fromAsBytes)},
-				},
-			},
-			{
-				LogValueRef: shs.LogValueRef{
-					Offset: 4,
-					Length: 1,
-				},
-				ValuePredicate: shs.ValuePredicate{
-					Op:      shs.UintGte,
-					IntArgs: []*big.Int{big.NewInt(1)},
-				},
-			},
-		},
+
+	assertTriggerDefinitionEquals := func(t *testing.T, body string, expected shs.EventTriggerDefinition) {
+		t.Helper()
+
+		etd := usecase.EventTriggerDefinitionResponse{
+			EventTriggerDefinition: shcommon.PrefixWith0x(hex.EncodeToString(expected.MarshalBytes())),
+		}
+		expectedJSON, err := json.Marshal(etd)
+		assert.NilError(t, err, "error marshalling")
+
+		w := httptest.NewRecorder()
+		request, _ := http.NewRequest("POST", "/test", strings.NewReader(body))
+		router.ServeHTTP(w, request)
+
+		assert.Equal(t, 200, w.Code)
+		require.JSONEq(t, string(expectedJSON), w.Body.String(), "roundtrip failed")
 	}
 
-	etd := usecase.EventTriggerDefinitionResponse{
-		EventTriggerDefinition: shcommon.PrefixWith0x(hex.EncodeToString(g.MarshalBytes())),
-	}
-	expected, err := json.Marshal(etd)
-	assert.NilError(t, err, "error marshalling")
+	t.Run("indexed from + amount", func(t *testing.T) {
 
-	request, _ := http.NewRequest("POST", "/test", strings.NewReader(bites))
-	router.ServeHTTP(w, request)
+		body := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": "1"}]}`
+		fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
+		assert.NilError(t, err, "hex decode failed")
+		var req usecase.EventTriggerDefinitionRequest
+		err = json.NewDecoder(strings.NewReader(body)).Decode(&req)
+		assert.NilError(t, err, "invalid json")
+		sig, err := sigparser.ParseSignature(req.EventSignature)
+		expected := shs.EventTriggerDefinition{
+			Contract: common.HexToAddress("0x4D6dD1382AA09be1d243F8960409A1ab3d913F43"),
+			LogPredicates: []shs.LogPredicate{
+				usecase.Topic0(sig),
+				{
+					LogValueRef: shs.LogValueRef{Offset: 1, Length: 1},
+					ValuePredicate: shs.ValuePredicate{
+						Op:       shs.BytesEq,
+						ByteArgs: [][]byte{usecase.Align(fromAsBytes)},
+					},
+				},
+				{
+					LogValueRef: shs.LogValueRef{Offset: 4, Length: 1},
+					ValuePredicate: shs.ValuePredicate{
+						Op:      shs.UintGte,
+						IntArgs: []*big.Int{big.NewInt(1)},
+					},
+				},
+			},
+		}
 
-	assert.Equal(t, 200, w.Code)
-	require.JSONEq(t, string(expected), w.Body.String(), "roundtrip failed")
+		assertTriggerDefinitionEquals(t, body, expected)
+	})
+
+	t.Run("indexed to uses offset 2", func(t *testing.T) {
+		body := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 value)","arguments": [{"name": "to", "op": "eq", "bytes":"0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"}]}`
+		toAsBytes, err := hexutil.Decode("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")
+		assert.NilError(t, err, "hex decode failed")
+		var req usecase.EventTriggerDefinitionRequest
+		err = json.NewDecoder(strings.NewReader(body)).Decode(&req)
+		assert.NilError(t, err, "invalid json")
+		sig, err := sigparser.ParseSignature(req.EventSignature)
+		assert.NilError(t, err, "invalid signature")
+		expected := shs.EventTriggerDefinition{
+			Contract: common.HexToAddress("0x4d6dd1382aa09be1d243f8960409a1ab3d913f43"),
+			LogPredicates: []shs.LogPredicate{
+				usecase.Topic0(sig),
+				{
+					LogValueRef: shs.LogValueRef{
+						Offset: 2,
+						Length: 1,
+					},
+					ValuePredicate: shs.ValuePredicate{
+						Op:       shs.BytesEq,
+						ByteArgs: [][]byte{usecase.Align(toAsBytes)},
+					},
+				},
+			},
+		}
+
+		assertTriggerDefinitionEquals(t, body, expected)
+	})
 }

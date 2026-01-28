@@ -114,6 +114,34 @@ func NewCryptoUsecase(
 	}
 }
 
+// getSigner returns the signer for the API signer address.
+func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *httpError.Http) {
+	chainID, err := uc.ethClient.ChainID(ctx)
+	if err != nil {
+		log.Err(err).Msg("err encountered while querying chain id")
+		metrics.TotalFailedRPCCalls.Inc()
+		err := httpError.NewHttpError(
+			"error encountered while querying chain id",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &err
+	}
+
+	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainID)
+	if err != nil {
+		log.Err(err).Msg("err encountered while creating signer")
+		err := httpError.NewHttpError(
+			"error encountered while creating signer",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &err
+	}
+
+	return newSigner, nil
+}
+
 func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
 	identityBytes, err := hex.DecodeString(strings.TrimPrefix(string(identity), "0x"))
 	if err != nil {
@@ -350,6 +378,16 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	}, nil
 }
 
+// GetDataForEncryptionEvent is the event-based variant which uses the API signer address to compute the identity.
+func (uc *CryptoUsecase) GetDataForEncryptionEvent(ctx context.Context, identityPrefixStringified string, triggerDefinitionHex string) (*GetDataForEncryptionResponse, *httpError.Http) {
+	newSigner, httpErr := uc.getSigner(ctx)
+	if httpErr != nil {
+		return nil, httpErr
+	}
+
+	return uc.GetDataForEncryption(ctx, newSigner.From.Hex(), identityPrefixStringified, triggerDefinitionHex)
+}
+
 func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimestamp uint64, identityPrefixStringified string) (*RegisterIdentityResponse, *httpError.Http) {
 	currentTimestamp := time.Now().Unix()
 	if currentTimestamp > int64(decryptionTimestamp) {
@@ -447,27 +485,9 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		return nil, &err
 	}
 
-	chainId, err := uc.ethClient.ChainID(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while quering chain id")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying chain id",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainId)
-	if err != nil {
-		log.Err(err).Msg("err encountered while creating signer")
-		err := httpError.NewHttpError(
-			"error encountered while registering identity",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
+	newSigner, httpErr := uc.getSigner(ctx)
+	if httpErr != nil {
+		return nil, httpErr
 	}
 
 	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)

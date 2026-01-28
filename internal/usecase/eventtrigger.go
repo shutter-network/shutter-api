@@ -206,7 +206,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 					}
 					lp.ValuePredicate.Op = shs.BytesEq
 					lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-					length = uint64(len(val) / shs.Word)
+					length = uint64((len(val) + 32) / shs.Word)
 				} else {
 					switch strings.ToLower(arg.Operator) {
 					case "lt":

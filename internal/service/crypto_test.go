@@ -73,7 +73,6 @@ func TestEventDecryptionData(t *testing.T) {
 	}
 
 	t.Run("indexed from + amount", func(t *testing.T) {
-
 		body := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)","arguments": [{"name": "from", "op": "eq", "bytes": "0x9e13976721ebff885611c8391d9b02749c1283fa"},{"name": "amount", "op": "gte", "number": "1"}]}`
 		fromAsBytes, err := hexutil.Decode("0x9e13976721ebff885611c8391d9b02749c1283fa")
 		assert.NilError(t, err, "hex decode failed")
@@ -132,5 +131,59 @@ func TestEventDecryptionData(t *testing.T) {
 		}
 
 		assertTriggerDefinitionEquals(t, body, expected)
+
+		t.Run("complex event data padding required", func(t *testing.T) {
+			body := `{"contract": "0x4d6dd1382aa09be1d243f8960409a1ab3d913f43", "eventSig":"event Someevent(address indexed from, address indexed to, uint256 value, byte complex, uint256 second)","arguments": [{"name": "to", "op": "eq", "bytes":"0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"}, {"name": "complex", "op": "eq", "bytes": "0x746869732069732061206c6f6e6720737472696e672077697468206c6f7473206f6620627974657320616e6420736f20746869732073686f756c64206e6f742066697420696e746f20612073696e676c6520776f7264"}, {"name": "second", "op": "gt", "number": "1"}]}`
+			toAsBytes, err := hexutil.Decode("0x7e5f4552091a69125d5dfcb7b8c2659029395bdf")
+			assert.NilError(t, err, "hex decode failed")
+			complexArg := common.FromHex("0x746869732069732061206c6f6e6720737472696e672077697468206c6f7473206f6620627974657320616e6420736f20746869732073686f756c64206e6f742066697420696e746f20612073696e676c6520776f7264")
+			complexLen := (len(complexArg) + 32) / shs.Word
+			var req usecase.EventTriggerDefinitionRequest
+			err = json.NewDecoder(strings.NewReader(body)).Decode(&req)
+			assert.NilError(t, err, "invalid json")
+			sig, err := sigparser.ParseSignature(req.EventSignature)
+			assert.NilError(t, err, "invalid signature")
+			assert.Equal(t, len(usecase.Align(complexArg)), 96)
+			assert.Equal(t, complexLen, 3)
+			expected := shs.EventTriggerDefinition{
+				Contract: common.HexToAddress("0x4d6dd1382aa09be1d243f8960409a1ab3d913f43"),
+				LogPredicates: []shs.LogPredicate{
+					usecase.Topic0(sig),
+					{
+						LogValueRef: shs.LogValueRef{
+							Offset: 2,
+							Length: 1,
+						},
+						ValuePredicate: shs.ValuePredicate{
+							Op:       shs.BytesEq,
+							ByteArgs: [][]byte{usecase.Align(toAsBytes)},
+						},
+					},
+					{
+						LogValueRef: shs.LogValueRef{
+							Offset: 4,
+							Length: uint64(complexLen),
+						},
+						ValuePredicate: shs.ValuePredicate{
+							Op:       shs.BytesEq,
+							ByteArgs: [][]byte{usecase.Align(complexArg)},
+						},
+					},
+					{
+						LogValueRef: shs.LogValueRef{
+							Offset: 4 + uint64(complexLen),
+							Length: 1,
+						},
+						ValuePredicate: shs.ValuePredicate{
+							Op:      shs.UintGt,
+							IntArgs: []*big.Int{big.NewInt(1)},
+						},
+					},
+				},
+			}
+			assert.NilError(t, expected.Validate(), "did not validate")
+
+			assertTriggerDefinitionEquals(t, body, expected)
+		})
 	})
 }

@@ -89,16 +89,14 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 
 	// Verify the registration was stored in the database
 	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:            int64(eon),
-		IdentityPrefix: identityPrefix,
-		Sender:         newSigner.From.Hex(),
+		Eon:      int64(eon),
+		Identity: identity,
 	})
 	for i := 0; i < 50 && (dbErr != nil || dbRegistration.ExpirationBlockNumber != expectedExpirationBlockNumber); i++ {
 		time.Sleep(20 * time.Millisecond)
 		dbRegistration, dbErr = s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-			Eon:            int64(eon),
-			IdentityPrefix: identityPrefix,
-			Sender:         newSigner.From.Hex(),
+			Eon:      int64(eon),
+			Identity: identity,
 		})
 	}
 	s.Require().NoError(dbErr)
@@ -424,9 +422,8 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 
 	// Verify the registration was stored in the database
 	dbRegistration, dbErr := s.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:            int64(eon),
-		IdentityPrefix: identityPrefix,
-		Sender:         newSigner.From.Hex(),
+		Eon:      int64(eon),
+		Identity: identity,
 	})
 	s.Require().NoError(dbErr)
 	s.Require().Equal(int64(eon), dbRegistration.Eon)

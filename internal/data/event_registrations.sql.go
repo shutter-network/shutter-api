@@ -20,17 +20,16 @@ SELECT
     tx_hash,
     created_at
 FROM event_identity_registration
-WHERE eon = $1 AND identity_prefix = $2 AND sender = $3
+WHERE eon = $1 AND identity = $2
 `
 
 type GetEventIdentityRegistrationParams struct {
-	Eon            int64
-	IdentityPrefix []byte
-	Sender         string
+	Eon      int64
+	Identity []byte
 }
 
 func (q *Queries) GetEventIdentityRegistration(ctx context.Context, arg GetEventIdentityRegistrationParams) (EventIdentityRegistration, error) {
-	row := q.db.QueryRow(ctx, getEventIdentityRegistration, arg.Eon, arg.IdentityPrefix, arg.Sender)
+	row := q.db.QueryRow(ctx, getEventIdentityRegistration, arg.Eon, arg.Identity)
 	var i EventIdentityRegistration
 	err := row.Scan(
 		&i.Eon,
@@ -47,17 +46,16 @@ func (q *Queries) GetEventIdentityRegistration(ctx context.Context, arg GetEvent
 
 const getEventTriggerExpirationBlockNumber = `-- name: GetEventTriggerExpirationBlockNumber :one
 SELECT COALESCE(expiration_block_number, 0) FROM event_identity_registration
-WHERE eon = $1 AND identity_prefix = $2 AND sender = $3
+WHERE eon = $1 AND identity = $2
 `
 
 type GetEventTriggerExpirationBlockNumberParams struct {
-	Eon            int64
-	IdentityPrefix []byte
-	Sender         string
+	Eon      int64
+	Identity []byte
 }
 
 func (q *Queries) GetEventTriggerExpirationBlockNumber(ctx context.Context, arg GetEventTriggerExpirationBlockNumberParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getEventTriggerExpirationBlockNumber, arg.Eon, arg.IdentityPrefix, arg.Sender)
+	row := q.db.QueryRow(ctx, getEventTriggerExpirationBlockNumber, arg.Eon, arg.Identity)
 	var expiration_block_number int64
 	err := row.Scan(&expiration_block_number)
 	return expiration_block_number, err
@@ -73,7 +71,7 @@ INSERT INTO event_identity_registration (
     event_trigger_definition,
     tx_hash
 ) VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT (eon, identity_prefix, sender) DO NOTHING
+ON CONFLICT (eon, identity) DO NOTHING
 `
 
 type InsertEventIdentityRegistrationParams struct {
@@ -101,22 +99,16 @@ func (q *Queries) InsertEventIdentityRegistration(ctx context.Context, arg Inser
 const updateEventIdentityRegistrationExpirationBlockNumber = `-- name: UpdateEventIdentityRegistrationExpirationBlockNumber :exec
 UPDATE event_identity_registration
 SET expiration_block_number = $1
-WHERE eon = $2 AND identity_prefix = $3 AND sender = $4
+WHERE eon = $2 AND identity = $3
 `
 
 type UpdateEventIdentityRegistrationExpirationBlockNumberParams struct {
 	ExpirationBlockNumber int64
 	Eon                   int64
-	IdentityPrefix        []byte
-	Sender                string
+	Identity              []byte
 }
 
 func (q *Queries) UpdateEventIdentityRegistrationExpirationBlockNumber(ctx context.Context, arg UpdateEventIdentityRegistrationExpirationBlockNumberParams) error {
-	_, err := q.db.Exec(ctx, updateEventIdentityRegistrationExpirationBlockNumber,
-		arg.ExpirationBlockNumber,
-		arg.Eon,
-		arg.IdentityPrefix,
-		arg.Sender,
-	)
+	_, err := q.db.Exec(ctx, updateEventIdentityRegistrationExpirationBlockNumber, arg.ExpirationBlockNumber, arg.Eon, arg.Identity)
 	return err
 }

@@ -374,9 +374,8 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinition)
 
 	_, err = uc.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
-		Eon:            int64(eon),
-		IdentityPrefix: identityPrefix[:],
-		Sender:         newSigner.From.Hex(),
+		Eon:      int64(eon),
+		Identity: identity,
 	})
 	if err == nil {
 		log.Warn().Msg("event identity already registered")
@@ -435,7 +434,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		// The registration is on-chain even if DB insert fails
 	}
 
-	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identityPrefix[:], newSigner.From.Hex(), ttl)
+	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identity, ttl)
 
 	metrics.TotalSuccessfulIdentityRegistration.Inc()
 	return &RegisterIdentityResponse{
@@ -447,7 +446,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	}, nil
 }
 
-func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon.Hash, eon uint64, identityPrefix []byte, sender string, ttl uint64) {
+func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon.Hash, eon uint64, identity []byte, ttl uint64) {
 	ctx := context.Background()
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -461,11 +460,11 @@ func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon
 			}
 
 			expirationBlockNumber := receipt.BlockNumber.Uint64() + ttl
+
 			err = uc.dbQuery.UpdateEventIdentityRegistrationExpirationBlockNumber(ctx, data.UpdateEventIdentityRegistrationExpirationBlockNumberParams{
 				ExpirationBlockNumber: int64(expirationBlockNumber),
 				Eon:                   int64(eon),
-				IdentityPrefix:        identityPrefix,
-				Sender:                sender,
+				Identity:              identity,
 			})
 			if err != nil {
 				log.Err(err).Str("tx_hash", txHash.Hex()).Msg("failed to update expiration block number")
@@ -477,22 +476,22 @@ func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon
 	}
 }
 
-func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon uint64, identityPrefix string) (*GetEventTriggerExpirationBlockResponse, *httpError.Http) {
-	identityPrefixBytes, err := hex.DecodeString(strings.TrimPrefix(identityPrefix, "0x"))
+func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon uint64, identity string) (*GetEventTriggerExpirationBlockResponse, *httpError.Http) {
+	identityBytes, err := hex.DecodeString(strings.TrimPrefix(identity, "0x"))
 	if err != nil {
-		log.Err(err).Msg("err encountered while decoding identity prefix")
+		log.Err(err).Msg("err encountered while decoding identity")
 		err := httpError.NewHttpError(
-			"error encountered while decoding identity prefix",
+			"error encountered while decoding identity",
 			"",
 			http.StatusBadRequest,
 		)
 		return nil, &err
 	}
 
-	if len(identityPrefixBytes) != 32 {
-		log.Err(err).Msg("identity prefix should be of length 32")
+	if len(identityBytes) != 32 {
+		log.Err(err).Msg("identity should be of length 32")
 		err := httpError.NewHttpError(
-			"identity prefix should be of length 32",
+			"identity should be of length 32",
 			"",
 			http.StatusBadRequest,
 		)
@@ -503,13 +502,12 @@ func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon
 	sender := address.Hex()
 
 	expirationBlockNumber, err := uc.dbQuery.GetEventTriggerExpirationBlockNumber(ctx, data.GetEventTriggerExpirationBlockNumberParams{
-		Eon:            int64(eon),
-		IdentityPrefix: identityPrefixBytes,
-		Sender:         sender,
+		Eon:      int64(eon),
+		Identity: identityBytes,
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			log.Debug().Uint64("eon", eon).Str("identityPrefix", identityPrefix).Str("sender", sender).Msg("event identity registration not found")
+			log.Debug().Uint64("eon", eon).Str("identity", identity).Str("sender", sender).Msg("event identity registration not found")
 			err := httpError.NewHttpError(
 				"event identity registration not found",
 				"",

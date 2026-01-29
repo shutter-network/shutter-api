@@ -297,10 +297,10 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 	}
 	eon := int64(-1)
 	eonArg, ok := ctx.GetQuery("eon")
-	var err error
+	var parseErr error
 	if ok {
-		eon, err = strconv.ParseInt(eonArg, 10, 64)
-		if err != nil {
+		eon, parseErr = strconv.ParseInt(eonArg, 10, 64)
+		if parseErr != nil {
 			err := sherror.NewHttpError(
 				"query parameter invalid",
 				"eon query parameter could not be parsed",

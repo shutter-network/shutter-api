@@ -34,14 +34,23 @@ func NewRouter(
 	docs.SwaggerInfo.BasePath = "/api"
 	api := router.Group("/api")
 	{
-		api.GET("/get_decryption_key", cryptoService.GetDecryptionKey)
-		api.GET("/get_event_decryption_key", cryptoService.GetEventDecryptionKey)
-		api.GET("/get_data_for_encryption", cryptoService.GetDataForEncryption)
-		api.POST("/register_identity", cryptoService.RegisterIdentity)
-		api.POST("/compile_event_trigger_definition", cryptoService.CompileEventTriggerDefinition)
 		api.GET("/decrypt_commitment", cryptoService.DecryptCommitment)
-		api.POST("/register_event_identity", cryptoService.RegisterEventIdentity)
-		api.GET("/get_event_trigger_expiration_block", cryptoService.GetEventTriggerExpirationBlock)
+
+		timeGroup := api.Group("/time")
+		{
+			timeGroup.POST("/register_identity", cryptoService.RegisterIdentity)
+			timeGroup.GET("/get_data_for_encryption", cryptoService.GetDataForEncryptionTime)
+			timeGroup.GET("/get_decryption_key", cryptoService.GetDecryptionKey)
+		}
+
+		eventGroup := api.Group("/event")
+		{
+			eventGroup.POST("/compile_trigger_definition", cryptoService.CompileEventTriggerDefinition)
+			eventGroup.POST("/register_identity", cryptoService.RegisterEventIdentity)
+			eventGroup.GET("/get_data_for_encryption", cryptoService.GetDataForEncryptionEvent)
+			eventGroup.GET("/get_trigger_expiration_block", cryptoService.GetEventTriggerExpirationBlock)
+			eventGroup.GET("/get_decryption_key", cryptoService.GetEventDecryptionKey)
+		}
 	}
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, func(c *ginSwagger.Config) {
 		c.Title = "Shutter-API"

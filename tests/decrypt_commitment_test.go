@@ -16,6 +16,7 @@ var msg = []byte("please hide this message")
 func (s *TestShutterService) TestDecryptionCommitmentNotFound() {
 	ctx := context.Background()
 	eon := rand.Int63()
+	blockNumber := rand.Uint64()
 
 	identity, err := generateRandomBytes(32)
 	s.Require().NoError(err)
@@ -40,6 +41,16 @@ func (s *TestShutterService) TestDecryptionCommitmentNotFound() {
 		}, nil).
 		Once()
 
+	s.ethClient.
+		On("BlockNumber", ctx).
+		Return(blockNumber, nil).
+		Once()
+
+	s.keyperSetManagerContract.
+		On("GetKeyperSetIndexByBlock", nil, blockNumber).
+		Return(uint64(eon), nil).
+		Once()
+
 	identityStringified := hex.EncodeToString(identity)
 	encryptedCommitmentStringified := hex.EncodeToString(encrypedCommitmentBytes)
 	_, err = s.cryptoUsecase.DecryptCommitment(ctx, encryptedCommitmentStringified, identityStringified, -1)
@@ -49,6 +60,7 @@ func (s *TestShutterService) TestDecryptionCommitmentNotFound() {
 func (s *TestShutterService) TestDecryptionCommitment() {
 	ctx := context.Background()
 	eon := rand.Int63()
+	blockNumber := rand.Uint64()
 
 	identity, err := generateRandomBytes(32)
 	s.Require().NoError(err)
@@ -73,6 +85,16 @@ func (s *TestShutterService) TestDecryptionCommitment() {
 			Eon:       uint64(eon),
 			Timestamp: uint64(timestamp),
 		}, nil).
+		Once()
+
+	s.ethClient.
+		On("BlockNumber", ctx).
+		Return(blockNumber, nil).
+		Once()
+
+	s.keyperSetManagerContract.
+		On("GetKeyperSetIndexByBlock", nil, blockNumber).
+		Return(uint64(eon), nil).
 		Once()
 
 	err = InsertDecryptionKey(ctx, s.testDB.DbInstance, eon, identity, decryptionKey.Marshal())

@@ -326,25 +326,29 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 // CompileEventTriggerDefinition godoc
 //
 //	@Summary		Allows clients to compile an event trigger definition string.
-//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
-//					supporting event based decryption triggers. Example request body:
-//					{
-//						"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
-//						"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
-//						"arguments": [
-//							{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
-//							{"name": "amount", "op": "gte", "number": 2}]
-//					}
-//					The object format for the "arguments" list is:
-//					- "name": <matching argument name from signature>
-//					- "op": <one of: lt, lte, eq, gte, gt>
-//					- "number": <integer argument for numeric comparison>
-//					- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
-//					Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
-//					For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
-//					For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
-//					For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.
-//					Note: the resulting condition for the trigger is a logical AND of all arguments given.
+//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.
+//	@Description	**Example request body:**
+//	@Description	```json
+//	@Description	{
+//	@Description		"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
+//	@Description		"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
+//	@Description		"arguments": [
+//	@Description			{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
+//	@Description			{"name": "amount", "op": "gte", "number": "2"}]
+//	@Description	}
+//	@Description	```
+//	@Description	**The object format for the "arguments" list is:**
+//	@Description	- **name**: <matching argument name from signature. Example: "from">
+//	@Description	- **op**: <one of: lt, lte, eq, gte, gt>
+//	@Description	- **number**: <integer argument for numeric comparison. Example: "2">
+//	@Description	- **bytes**: <hex encoded byte argument for non numeric matches with 'op==eq'>
+//	@Description
+//	@Description	**Notes:**
+//	@Description	- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
+//	@Description	- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
+//	@Description	- For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
+//	@Description	- For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.
+//	@Description	- The resulting condition for the trigger is a logical AND of all arguments given.
 //
 //
 //	@Tags			Crypto

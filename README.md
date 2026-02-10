@@ -372,7 +372,7 @@ console.log("Encrypted Commitment:", encryptedCommitment);
 
 #### 3.A Retrieve the Decryption Key
 
-After the decryption trigger conditions are met (i.e., the specified timestamp has passed), retrieve the decryption key using the `/time/get_decryption_key` endpoint. or for event based decryption triggers the `/event/get_decryption_key` endpoint.
+After the decryption trigger conditions are met (e.g., the specified timestamp has passed, or the event has fired), retrieve the decryption key using `/time/get_decryption_key` or, for event based decryption triggers, `/event/get_decryption_key`.
 
 Refer to the Swagger documentation for detailed usage.
 

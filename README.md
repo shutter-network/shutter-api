@@ -394,7 +394,7 @@ curl -X GET "https://<API_BASE_URL>/time/get_decryption_key?identity=0x8c232eae4
 ```bash
 curl -X GET "https://<API_BASE_URL>/event/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75&eon=1"
 ```
-Note: If eon is not passed, the api will fetch the current eon
+Note: If eon is not passed, the api will use the current eon.
 
 #### Example Response (Event-Based)
 ```json

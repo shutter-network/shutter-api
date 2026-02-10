@@ -30,11 +30,11 @@ services:
       # /check_authentication endpoint
       caddy.@checkauth.path_0: "/check_authentication"
       caddy.@checkauth.path_1: "/api/check_authentication"
-      caddy.handle_7: "@checkauth"
-      caddy.handle_7.handle_0: "@withApiKey"
-      caddy.handle_7.handle_0.respond: "`{\"result\": \"authenticated\"}`"
-      caddy.handle_7.handle_1: "@noApiKey"
-      caddy.handle_7.handle_1.respond: "`{\"result\": \"unauthenticated\"}`"
+      caddy.handle: "@checkauth"
+      caddy.handle.handle_0: "@withApiKey"
+      caddy.handle.handle_0.respond: "`{\"result\": \"authenticated\"}`"
+      caddy.handle.handle_1: "@noApiKey"
+      caddy.handle.handle_1.respond: "`{\"result\": \"unauthenticated\"}`"
 
       ## Redirects from old endpoints to new ones (308 Permanent Redirect - preserves HTTP method and request body):
       # /api/register_event_identity -> /api/event/register_identity

@@ -55,7 +55,7 @@ func NewCryptoService(
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_event_decryption_key [get]
+//		@Router			/event/get_decryption_key [get]
 func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
@@ -108,7 +108,7 @@ func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_decryption_key [get]
+//		@Router			/time/get_decryption_key [get]
 func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 	identity, ok := ctx.GetQuery("identity")
 	if !ok {
@@ -133,22 +133,21 @@ func (svc *CryptoService) GetDecryptionKey(ctx *gin.Context) {
 
 //	@BasePath	/api
 //
-// GetDataForEncryption godoc
+// GetDataForEncryptionTime godoc
 //
-//		@Summary		Provides data necessary to allow encryption.
-//		@Description	Retrieves all the necessary data required by clients for encrypting any message. Supports both time-based and event-based identity computation. If triggerDefinition is provided, the identity will be computed for event-based triggers. Otherwise, it uses time-based identity computation.
+//		@Summary		Provides data necessary to allow time-based encryption.
+//		@Description	Retrieves all the necessary data required by clients for encrypting any message using time-based identity computation.
 //		@Tags			Crypto
 //		@Produce		json
-//		@Param			address			query		string									true	"Ethereum address associated with the identity. Time‑based: use the address that will register the identity (your account if self‑registering, or the API signer address below if you are using the API register endpoint). Event‑based (triggerDefinition provided): users cannot self‑register because the registry is owner‑only, please use the API signer address below. Gnosis Mainnet API address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc Chiado API address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
+//		@Param			address			query		string									true	"Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918"
 //		@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
-//		@Param			triggerDefinition	query		string									false	"Optional event trigger definition (hex-encoded with 0x prefix). If provided, identity will be computed for event-based triggers. This parameter is strictly for event-based triggers."
 //		@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
 //		@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_data_for_encryption [get]
-func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
+//		@Router			/time/get_data_for_encryption [get]
+func (svc *CryptoService) GetDataForEncryptionTime(ctx *gin.Context) {
 	address, ok := ctx.GetQuery("address")
 	if !ok {
 		err := sherror.NewHttpError(
@@ -165,12 +164,50 @@ func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 		identityPrefix = ""
 	}
 
-	triggerDefinition, ok := ctx.GetQuery("triggerDefinition")
+	data, httpErr := svc.CryptoUsecase.GetDataForEncryption(ctx, address, identityPrefix, "")
+	if httpErr != nil {
+		ctx.Error(httpErr)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": data,
+	})
+}
+
+//	@BasePath	/api
+//
+// GetDataForEncryptionEvent godoc
+//
+//		@Summary		Provides data necessary to allow event-based encryption.
+//		@Description	Retrieves all the necessary data required by clients for encrypting any message using event-based identity computation.
+//		@Tags			Crypto
+//		@Produce		json
+//		@Param			triggerDefinition	query		string									true	"Event trigger definition (hex-encoded with 0x prefix)."
+//		@Param			identityPrefix	query		string									false	"Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you."
+//		@Success		200				{object}	usecase.GetDataForEncryptionResponse	"Success."
+//		@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
+//		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
+//		@Failure		500			{object}	error.Http							"Internal server error."
+//	 	@Security		BearerAuth
+//		@Router			/event/get_data_for_encryption [get]
+func (svc *CryptoService) GetDataForEncryptionEvent(ctx *gin.Context) {
+	identityPrefix, ok := ctx.GetQuery("identityPrefix")
 	if !ok {
-		triggerDefinition = ""
+		identityPrefix = ""
 	}
 
-	data, httpErr := svc.CryptoUsecase.GetDataForEncryption(ctx, address, identityPrefix, triggerDefinition)
+	triggerDefinition, ok := ctx.GetQuery("triggerDefinition")
+	if !ok || triggerDefinition == "" {
+		err := sherror.NewHttpError(
+			"query parameter not found",
+			"triggerDefinition query parameter is required for event-based get_data_for_encryption",
+			http.StatusBadRequest,
+		)
+		ctx.Error(err)
+		return
+	}
+
+	data, httpErr := svc.CryptoUsecase.GetDataForEncryptionEvent(ctx, identityPrefix, triggerDefinition)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return
@@ -195,7 +232,7 @@ func (svc *CryptoService) GetDataForEncryption(ctx *gin.Context) {
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/register_identity [post]
+//		@Router			/time/register_identity [post]
 func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 	var req RegisterIdentityRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -260,10 +297,10 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 	}
 	eon := int64(-1)
 	eonArg, ok := ctx.GetQuery("eon")
-	var err error
+	var parseErr error
 	if ok {
-		eon, err = strconv.ParseInt(eonArg, 10, 64)
-		if err != nil {
+		eon, parseErr = strconv.ParseInt(eonArg, 10, 64)
+		if parseErr != nil {
 			err := sherror.NewHttpError(
 				"query parameter invalid",
 				"eon query parameter could not be parsed",
@@ -289,25 +326,29 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 // CompileEventTriggerDefinition godoc
 //
 //	@Summary		Allows clients to compile an event trigger definition string.
-//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers
-//					supporting event based decryption triggers. Example request body:
-//					{
-//						"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
-//						"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
-//						"arguments": [
-//							{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
-//							{"name": "amount", "op": "gte", "number": 2}]
-//					}
-//					The object format for the "arguments" list is:
-//					- "name": <matching argument name from signature>
-//					- "op": <one of: lt, lte, eq, gte, gt>
-//					- "number": <integer argument for numeric comparison>
-//					- "bytes": <hex encoded byte argument for non numeric matches with 'op==eq'>
-//					Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
-//					For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
-//					For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
-//					For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.
-//					Note: the resulting condition for the trigger is a logical AND of all arguments given.
+//	@Description	This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.
+//	@Description	**Example request body:**
+//	@Description	```json
+//	@Description	{
+//	@Description		"contract": "0x953A0425ACCee2E05f22E78999c595eD2eE7183c",
+//	@Description		"eventSig":"event Transfer(address indexed from, address indexed to, uint256 amount)",
+//	@Description		"arguments": [
+//	@Description			{"name": "from", "op": "eq", "bytes": "0x812a6755975485C6E340F97dE6790B34a94D1430"},
+//	@Description			{"name": "amount", "op": "gte", "number": "2"}]
+//	@Description	}
+//	@Description	```
+//	@Description	**The object format for the "arguments" list is:**
+//	@Description	- **name**: <matching argument name from signature. Example: "from">
+//	@Description	- **op**: <one of: lt, lte, eq, gte, gt>
+//	@Description	- **number**: <integer argument for numeric comparison. Example: "2">
+//	@Description	- **bytes**: <hex encoded byte argument for non numeric matches with 'op==eq'>
+//	@Description
+//	@Description	**Notes:**
+//	@Description	- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
+//	@Description	- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
+//	@Description	- For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
+//	@Description	- For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.
+//	@Description	- The resulting condition for the trigger is a logical AND of all arguments given.
 //
 //
 //	@Tags			Crypto
@@ -318,7 +359,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //	@Failure		429		{object}	error.Http							"Too many requests. Rate limited."
 //	@Failure		500		{object}	error.Http							"Internal server error."
 //	@Security		BearerAuth
-//	@Router			/compile_event_trigger_definition [post]
+//	@Router			/event/compile_trigger_definition [post]
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
 	CompileEventTriggerDefinition(ctx)
 }
@@ -360,7 +401,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 //		@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http						"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/register_event_identity [post]
+//		@Router			/event/register_identity [post]
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 	var req RegisterEventIdentityRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -400,7 +441,7 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
 //	 	@Security		BearerAuth
-//		@Router			/get_event_trigger_expiration_block [get]
+//		@Router			/event/get_trigger_expiration_block [get]
 func (svc *CryptoService) GetEventTriggerExpirationBlock(ctx *gin.Context) {
 	eonStr, ok := ctx.GetQuery("eon")
 	if !ok {

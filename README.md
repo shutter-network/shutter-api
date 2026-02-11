@@ -72,13 +72,14 @@ This documentation will guide you through:
 
 For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip:
 
-  - `/register_identity` 5 requests per 24 hours
-  - `/compile_event_trigger_definition` 20 requests per 24 hours
-  - `/register_event_identity` 5 requests per 24 hours
-  - `/get_event_trigger_expiration_block` 20 requests per 24 hours
-  - `/get_data_for_encryption` 10 requests per 24 hours
-  - `/get_decryption_key` 20 requests per 24 hours
-  - `/get_event_decryption_key` 20 requests per 24 hours
+  - `/time/register_identity` 5 requests per 24 hours
+  - `/time/get_data_for_encryption` 10 requests per 24 hours
+  - `/time/get_decryption_key` 20 requests per 24 hours
+  - `/event/compile_trigger_definition` 20 requests per 24 hours
+  - `/event/register_identity` 5 requests per 24 hours
+  - `/event/get_data_for_encryption` 10 requests per 24 hours
+  - `/event/get_trigger_expiration_block` 20 requests per 24 hours
+  - `/event/get_decryption_key` 20 requests per 24 hours
   - `/decrypt_commitment` 10 requests per 24 hours
 
 We recommend using Chiado for development, because there are no rate limits in place.
@@ -87,13 +88,14 @@ If you need higher limits, contact [loring@brainbot.com](mailto:loring@brainbot.
 
 Authorized requests have these limits:
 
-  - `/register_identity` 500 requests per 24 hours
-  - `/compile_event_trigger_definition` 2000 requests per 24 hours
-  - `/register_event_identity` 500 requests per 24 hours
-  - `/get_event_trigger_expiration_block` 2000 requests per 24 hours
-  - `/get_data_for_encryption` 1000 requests per 24 hours
-  - `/get_decryption_key` 2000 requests per 24 hours
-  - `/get_event_decryption_key` 2000 requests per 24 hours
+  - `/time/register_identity` 500 requests per 24 hours
+  - `/time/get_data_for_encryption` 1000 requests per 24 hours
+  - `/time/get_decryption_key` 2000 requests per 24 hours
+  - `/event/compile_trigger_definition` 2000 requests per 24 hours
+  - `/event/register_identity` 500 requests per 24 hours
+  - `/event/get_data_for_encryption` 1000 requests per 24 hours
+  - `/event/get_trigger_expiration_block` 2000 requests per 24 hours
+  - `/event/get_decryption_key` 2000 requests per 24 hours
   - `/decrypt_commitment` 1000 requests per 24 hours
 
 Authorization is done by using an `Authorization: Bearer $API_KEY` header, when calling the API.
@@ -110,14 +112,14 @@ Use the `/check_authentication` endpoint, to test your API key.
 
 To begin using the Shutter system, register an identity and specify a time-based decryption trigger. This step links an identity to a decryption key and sets the release conditions for the key to a Unix timestamp.
 
-Refer to the `/register_identity` endpoint in the Swagger documentation for details on parameters and responses.
+Refer to the `/time/register_identity` endpoint in the Swagger documentation for details on parameters and responses.
 
 > **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
 > [ShutterRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterRegistry.sol#L1C1-L86C2).
 
 #### Example Request
 ```bash
-curl -X POST https://<API_BASE_URL>/register_identity \
+curl -X POST https://<API_BASE_URL>/time/register_identity \
 -H "Content-Type: application/json" \
 -d '{
   "decryptionTimestamp": 1735044061,
@@ -144,11 +146,11 @@ Before registering an identity with event-based decryption triggers, you need to
 
 The trigger condition is specified by a `contract address` (mandatory), the event's signature (mandatory), and a number of additional arguments. Event data can be matched as `byte-equals` or numeric comparisons (`lt, lte, eq, gte, gt`) over an uint256-cast of the specified event data fields.
 
-Refer to the `/compile_event_trigger_definition` endpoint in the Swagger documentation for details on parameters and responses.
+Refer to the `/event/compile_trigger_definition` endpoint in the Swagger documentation for details on parameters and responses.
 
 #### Example Request
 ```bash
-curl -X POST https://<API_BASE_URL>/compile_event_trigger_definition \
+curl -X POST https://<API_BASE_URL>/event/compile_trigger_definition \
 -H "Content-Type: application/json" \
 -d '{
   "contract": "0x3465a347342B72BCf800aBf814324ba4a803c32b",
@@ -185,20 +187,22 @@ curl -X POST https://<API_BASE_URL>/compile_event_trigger_definition \
 
 ### 1.C Register an Identity with Event-based Decryption Triggers
 
-In order to register, you need a compiled event trigger definition (created using `/compile_event_trigger_definition`, see above). Registered event-based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if:
+An alternative to time-based decryption triggers is "event-based" decryption triggers. This is very similar to the time-based release conditions discussed above. However, here the decryption key is produced only when a specific EVM event has been observed by the keypers.
+
+The trigger condition is specified by a compiled event trigger definition (created using `/event/compile_trigger_definition`, see above). Registered event-based decryption triggers are bound by a time-to-live (`ttl`). The decryption keys are only released once and only if:
 
 - the release condition has not been met before (since registration)
 - the `ttl` timer has not run out, and
 - *all* conditions of the trigger definition were fulfilled.
 
-Refer to the `/register_event_identity` endpoint in the Swagger documentation for details on parameters and responses.
+Refer to the `/event/register_identity` endpoint in the Swagger documentation for details on parameters and responses.
 
 > **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. For the time being, it is **not** possibly to register event based decryption triggers directly with the contract. The contract's definition can be found here:
 > [ShutterEventTriggerRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterEventTriggerRegistry.sol#L35-L40)
 
 #### Example Request
 ```bash
-curl -X POST https://<API_BASE_URL>/register_event_identity \
+curl -X POST https://<API_BASE_URL>/event/register_identity \
 -H "Content-Type: application/json" \
 -d '{
   "triggerDefinition": "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402",
@@ -220,17 +224,17 @@ curl -X POST https://<API_BASE_URL>/register_event_identity \
 }
 ```
 
-> **Note**: The encoding of `triggerDefinition` is specified [in rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/event.md). It is a concatenation of contract address, topic0 and the RLP encoding of the other conditions. Event definitions should be constructed using the `/compile_event_trigger_definition` endpoint.
+> **Note**: The encoding of `triggerDefinition` is specified [in rolling-shutter](https://github.com/shutter-network/rolling-shutter/blob/main/docs/event.md). It is a concatenation of contract address, topic0 and the RLP encoding of the other conditions. Event definitions should be constructed using the `/event/compile_trigger_definition` endpoint.
 
 ### 1.D Get Event Trigger Identity Registration Expiration Block
 
 Retrieve the expiration block number for a given event trigger identity registration. This endpoint allows you to check the expiration block number for an event-based identity registration.
 
-Refer to the `/get_event_trigger_expiration_block` endpoint in the Swagger documentation for details on parameters and responses.
+Refer to the `/event/get_trigger_expiration_block` endpoint in the Swagger documentation for details on parameters and responses.
 
 #### Example Request
 ```bash
-curl -X GET "https://<API_BASE_URL>/get_event_trigger_expiration_block?eon=1&identityPrefix=0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
+curl -X GET "https://<API_BASE_URL>/event/get_trigger_expiration_block?eon=1&identityPrefix=0x32fdbd2ca52e171f77db2757ff6200cd8446350f927a3ad46c0565483dd8b41c"
 ```
 
 #### Example Response
@@ -246,22 +250,21 @@ curl -X GET "https://<API_BASE_URL>/get_event_trigger_expiration_block?eon=1&ide
 
 #### 2.A Retrieve the Encryption Data
 
-To encrypt commitments, obtain the encryption data associated with your identity. Use the `/get_data_for_encryption` endpoint to retrieve all necessary encryption data.
+To encrypt commitments, obtain the encryption data associated with your identity. There are two endpoints:
 
-This endpoint supports both time-based and event-based identity computation:
-- For **Time-based**: Omit the `triggerDefinition` parameter.
-- For **Event-based**: Provide the `triggerDefinition` parameter (hex-encoded with 0x prefix) as well to compute identity for event-based triggers.
+- **Time-based**: `/time/get_data_for_encryption` — parameters `address` (required) and `identityPrefix` (optional). Use the address that will register the identity (your account if self-registering, or the API address: Gnosis `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`, Chiado `0xb9C303443c9af84777e60D5C987AbF0c43844918`).
+- **Event-based**: `/event/get_data_for_encryption` — parameters `triggerDefinition` (required) and `identityPrefix` (optional).
 
-Refer to the Swagger documentation for specifics on this endpoint.
+Refer to the Swagger documentation for specifics on these endpoints.
 
 #### Example Request (Time-based)
 ```bash
-curl -X GET "https://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+curl -X GET "https://<API_BASE_URL>/time/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
 ```
 
 #### Example Request (Event-based)
 ```bash
-curl -X GET "https://<API_BASE_URL>/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0&triggerDefinition=0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+curl -X GET "https://<API_BASE_URL>/event/get_data_for_encryption?identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0&triggerDefinition=0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
 ```
 
 #### Example Response
@@ -369,20 +372,35 @@ console.log("Encrypted Commitment:", encryptedCommitment);
 
 #### 3.A Retrieve the Decryption Key
 
-After the decryption trigger conditions are met (i.e., the specified timestamp has passed), retrieve the decryption key using the `/get_decryption_key` endpoint, or for event based decryption triggers the `get_event_decryption_key` endpoint.
+After the decryption trigger conditions are met (e.g., the specified timestamp has passed, or the event has fired), retrieve the decryption key using `/time/get_decryption_key` or, for event based decryption triggers, `/event/get_decryption_key`.
 
 Refer to the Swagger documentation for detailed usage.
 
-#### Example Request
+#### Example Request (Time-Based)
 ```bash
-curl -X GET "https://<API_BASE_URL>/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
+curl -X GET "https://<API_BASE_URL>/time/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
 ```
 
-#### Example Response
+#### Example Response (Time-Based)
 ```json
 {
   "decryption_key": "0x99a805fc26812c13041126b25e91eccf3de464d1df7a95d1edca8831a9ec02dd",
   "decryption_timestamp": 1735044061,
+  "identity": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
+}
+```
+
+#### Example Request (Event-Based)
+```bash
+curl -X GET "https://<API_BASE_URL>/event/get_decryption_key?identity=0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75&eon=1"
+```
+Note: If eon is not passed, the api will use the current eon.
+
+#### Example Response (Event-Based)
+```json
+{
+  "decryption_key": "0x99a805fc26812c13041126b25e91eccf3de464d1df7a95d1edca8831a9ec02dd",
+  "decryption_timestamp": 0,
   "identity": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75"
 }
 ```

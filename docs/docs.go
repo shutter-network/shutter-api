@@ -15,60 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/compile_event_trigger_definition": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Crypto"
-                ],
-                "summary": "Allows clients to compile an event trigger definition string.",
-                "parameters": [
-                    {
-                        "description": "Event signature and match arguments.",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/EventTriggerDefinitionRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Success.",
-                        "schema": {
-                            "$ref": "#/definitions/usecase.EventTriggerDefinitionResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid Event Data.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Rate limited.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    }
-                }
-            }
-        },
         "/decrypt_commitment": {
             "get": {
                 "security": [
@@ -139,26 +85,80 @@ const docTemplate = `{
                 }
             }
         },
-        "/get_data_for_encryption": {
-            "get": {
+        "/event/compile_trigger_definition": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves all the necessary data required by clients for encrypting any message. Supports both time-based and event-based identity computation. If triggerDefinition is provided, the identity will be computed for event-based triggers. Otherwise, it uses time-based identity computation.",
+                "description": "This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.\n**Example request body:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"contract\": \"0x953A0425ACCee2E05f22E78999c595eD2eE7183c\",\n\"eventSig\":\"event Transfer(address indexed from, address indexed to, uint256 amount)\",\n\"arguments\": [\n{\"name\": \"from\", \"op\": \"eq\", \"bytes\": \"0x812a6755975485C6E340F97dE6790B34a94D1430\"},\n{\"name\": \"amount\", \"op\": \"gte\", \"number\": \"2\"}]\n}\n` + "`" + `` + "`" + `` + "`" + `\n**The object format for the \"arguments\" list is:**\n- **name**: \u003cmatching argument name from signature. Example: \"from\"\u003e\n- **op**: \u003cone of: lt, lte, eq, gte, gt\u003e\n- **number**: \u003cinteger argument for numeric comparison. Example: \"2\"\u003e\n- **bytes**: \u003chex encoded byte argument for non numeric matches with 'op==eq'\u003e\n\n**Notes:**\n- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.\n- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.\n- For non‑indexed uint256, use a string of the number (i.e. \"1234\") with lt/lte/eq/gte/gt.\n- For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.\n- The resulting condition for the trigger is a logical AND of all arguments given.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Crypto"
                 ],
-                "summary": "Provides data necessary to allow encryption.",
+                "summary": "Allows clients to compile an event trigger definition string.",
+                "parameters": [
+                    {
+                        "description": "Event signature and match arguments.",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/EventTriggerDefinitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/usecase.EventTriggerDefinitionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Event Data.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/event/get_data_for_encryption": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves all the necessary data required by clients for encrypting any message using event-based identity computation.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Provides data necessary to allow event-based encryption.",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Ethereum address associated with the identity. Time‑based: use the address that will register the identity (your account if self‑registering, or the API signer address below if you are using the API register endpoint). Event‑based (triggerDefinition provided): users cannot self‑register because the registry is owner‑only, please use the API signer address below. Gnosis Mainnet API address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc Chiado API address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
-                        "name": "address",
+                        "description": "Event trigger definition (hex-encoded with 0x prefix).",
+                        "name": "triggerDefinition",
                         "in": "query",
                         "required": true
                     },
@@ -166,12 +166,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you.",
                         "name": "identityPrefix",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Optional event trigger definition (hex-encoded with 0x prefix). If provided, identity will be computed for event-based triggers. This parameter is strictly for event-based triggers.",
-                        "name": "triggerDefinition",
                         "in": "query"
                     }
                 ],
@@ -203,65 +197,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/get_decryption_key": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Crypto"
-                ],
-                "summary": "Get decryption key.",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Identity associated with the decryption key.",
-                        "name": "identity",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Success.",
-                        "schema": {
-                            "$ref": "#/definitions/GetDecryptionKey"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid Get decryption key request.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    },
-                    "404": {
-                        "description": "Decryption key not found for the associated identity.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    },
-                    "429": {
-                        "description": "Too many requests. Rate limited.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error.",
-                        "schema": {
-                            "$ref": "#/definitions/error.Http"
-                        }
-                    }
-                }
-            }
-        },
-        "/get_event_decryption_key": {
+        "/event/get_decryption_key": {
             "get": {
                 "security": [
                     {
@@ -326,7 +262,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/get_event_trigger_expiration_block": {
+        "/event/get_trigger_expiration_block": {
             "get": {
                 "security": [
                     {
@@ -392,7 +328,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/register_event_identity": {
+        "/event/register_identity": {
             "post": {
                 "security": [
                     {
@@ -446,7 +382,123 @@ const docTemplate = `{
                 }
             }
         },
-        "/register_identity": {
+        "/time/get_data_for_encryption": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves all the necessary data required by clients for encrypting any message using time-based identity computation.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Provides data necessary to allow time-based encryption.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ethereum address associated with the identity. If you are registering the identity yourself, pass the address of the account making the registration. If you want the API to register the identity on gnosis mainnet, pass the address: 0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc. For chiado pass the address: 0xb9C303443c9af84777e60D5C987AbF0c43844918",
+                        "name": "address",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional identity prefix. You can generate it on your end and pass it to this endpoint, or allow the API to randomly generate one for you.",
+                        "name": "identityPrefix",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetDataForEncryption"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get data for encryption request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/time/get_decryption_key": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves a decryption key for a given registered identity once the timestamp is reached. Decryption key is 0x padded, clients need to remove the prefix when decrypting on their end.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crypto"
+                ],
+                "summary": "Get decryption key.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Identity associated with the decryption key.",
+                        "name": "identity",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success.",
+                        "schema": {
+                            "$ref": "#/definitions/GetDecryptionKey"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Get decryption key request.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "404": {
+                        "description": "Decryption key not found for the associated identity.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests. Rate limited.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    }
+                }
+            }
+        },
+        "/time/register_identity": {
             "post": {
                 "security": [
                     {

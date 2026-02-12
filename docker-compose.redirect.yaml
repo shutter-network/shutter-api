@@ -50,3 +50,13 @@ services:
       caddy.@redirect_get_event_decryption_key.path: "/api/get_event_decryption_key*"
       caddy.@redirect_get_event_decryption_key.method: GET
       caddy.redir_6: "@redirect_get_event_decryption_key /api/event/get_decryption_key?{query} 308"
+
+  caddy:
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
+    image: caddy-docker-proxy-rate-limit
+    volumes:
+      - ${DATA_DIR:-./data}/apikeys.caddy:/etc/caddy/apikeys
+    entrypoint: /usr/bin/caddy
+    command: docker-proxy run

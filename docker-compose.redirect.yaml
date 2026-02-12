@@ -1,0 +1,52 @@
+### Docker Compose overrides for redirects (old API endpoints → new ones)
+#
+# Usage:
+#   Add the override via `-f docker-compose.redirect.yaml`, e.g.:
+#   ```
+#   docker compose -f docker-compose.yml -f docker-compose.redirect.yaml up -d
+#   ```
+#
+# Use together with rate limiting if needed:
+#   ```
+#   docker compose -f docker-compose.yml -f docker-compose.redirect.yaml -f docker-compose.rate_limit.yaml up -d
+#   ```
+
+services:
+  shutter-api:
+    labels:
+      ## Redirects from old endpoints to new ones (308 Permanent Redirect - preserves HTTP method and request body):
+      # /api/register_event_identity -> /api/event/register_identity
+      caddy.@redirect_register_event_identity.path: "/api/register_event_identity*"
+      caddy.@redirect_register_event_identity.method: POST
+      caddy.redir_0: "@redirect_register_event_identity /api/event/register_identity 308"
+
+      # /api/register_identity -> /api/time/register_identity
+      caddy.@redirect_register_identity.path: "/api/register_identity*"
+      caddy.@redirect_register_identity.method: POST
+      caddy.redir_1: "@redirect_register_identity /api/time/register_identity 308"
+
+      # /api/get_data_for_encryption -> /api/time/get_data_for_encryption
+      # Note: This redirects to time-based by default.
+      caddy.@redirect_get_data_for_encryption.path: "/api/get_data_for_encryption*"
+      caddy.@redirect_get_data_for_encryption.method: GET
+      caddy.redir_2: "@redirect_get_data_for_encryption /api/time/get_data_for_encryption?{query} 308"
+
+      # /api/compile_event_trigger_definition -> /api/event/compile_trigger_definition
+      caddy.@redirect_compile_event_trigger_definition.path: "/api/compile_event_trigger_definition*"
+      caddy.@redirect_compile_event_trigger_definition.method: POST
+      caddy.redir_3: "@redirect_compile_event_trigger_definition /api/event/compile_trigger_definition 308"
+
+      # /api/get_decryption_key -> /api/time/get_decryption_key
+      caddy.@redirect_get_decryption_key.path: "/api/get_decryption_key*"
+      caddy.@redirect_get_decryption_key.method: GET
+      caddy.redir_4: "@redirect_get_decryption_key /api/time/get_decryption_key?{query} 308"
+
+      # /api/get_event_trigger_expiration_block -> /api/event/get_trigger_expiration_block
+      caddy.@redirect_get_event_trigger_expiration_block.path: "/api/get_event_trigger_expiration_block*"
+      caddy.@redirect_get_event_trigger_expiration_block.method: GET
+      caddy.redir_5: "@redirect_get_event_trigger_expiration_block /api/event/get_trigger_expiration_block?{query} 308"
+
+      # /api/get_event_decryption_key -> /api/event/get_decryption_key
+      caddy.@redirect_get_event_decryption_key.path: "/api/get_event_decryption_key*"
+      caddy.@redirect_get_event_decryption_key.method: GET
+      caddy.redir_6: "@redirect_get_event_decryption_key /api/event/get_decryption_key?{query} 308"

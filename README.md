@@ -116,13 +116,14 @@ Refer to the `/time/register_identity` endpoint in the Swagger documentation for
 
 > **Note**: When registering identities through our API, the API account address is used to compute the identity that will be returned. If you want to use your own address, you need to submit the registration directly to the registry contract. The contract's definition can be found here:
 > [ShutterRegistry.sol](https://github.com/shutter-network/contracts/blob/main/src/shutter-service/ShutterRegistry.sol#L1C1-L86C2).
+> We follow Gnosis Mainnet block timestamps for `decryptionTimestamp`. The identities will be released on the basis of Gnosis Timestamp only (~every 5 seconds).
 
 #### Example Request
 ```bash
 curl -X POST https://<API_BASE_URL>/time/register_identity \
 -H "Content-Type: application/json" \
 -d '{
-  "decryptionTimestamp": 1735044061,
+  "decryptionTimestamp": 1735044060,
   "identityPrefix": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
 }'
 ```
@@ -442,6 +443,9 @@ The keyper set is designed to handle downtime gracefully. Any missed decryption 
 
 ### How secure is the Shutter system?
 The Shutter system uses threshold encryption and distributed cryptographic operations to ensure that no single entity can compromise the security of commitments.
+
+### Why is my decryption key not released after the given timestamp has elapsed?
+This is probably because the decryption timestamp is not aligned to a Gnosis Chain block timestamp. We strictly follow Gnosis Chain block timestamps to release decryption keys i.e. every 5 seconds. In this case simply try again a few seconds later. 
 
 ## Swagger Documentation
 

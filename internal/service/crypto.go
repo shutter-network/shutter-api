@@ -434,7 +434,7 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 //		@Tags			Crypto
 //		@Produce		json
 //		@Param			eon		query		uint64									true	"Eon number associated with the event identity registration."
-//		@Param			identityPrefix	query		string									true	"Identity prefix associated with the event identity registration."
+//		@Param			identity	query		string									true	"Identity associated with the event identity registration."
 //		@Success		200		{object}	usecase.GetEventTriggerExpirationBlockResponse	"Success."
 //		@Failure		400		{object}	error.Http								"Invalid Get event identity registration expiration block number request."
 //		@Failure		404		{object}	error.Http								"Event identity registration not found."
@@ -465,18 +465,18 @@ func (svc *CryptoService) GetEventTriggerExpirationBlock(ctx *gin.Context) {
 		return
 	}
 
-	identityPrefix, ok := ctx.GetQuery("identityPrefix")
+	identity, ok := ctx.GetQuery("identity")
 	if !ok {
 		err := sherror.NewHttpError(
 			"query parameter not found",
-			"identityPrefix query parameter is required",
+			"identity query parameter is required",
 			http.StatusBadRequest,
 		)
 		ctx.Error(err)
 		return
 	}
 
-	data, httpErr := svc.CryptoUsecase.GetEventTriggerExpirationBlock(ctx, eon, identityPrefix)
+	data, httpErr := svc.CryptoUsecase.GetEventTriggerExpirationBlock(ctx, eon, identity)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return

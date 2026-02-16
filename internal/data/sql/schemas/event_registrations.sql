@@ -9,5 +9,5 @@ CREATE TABLE event_identity_registration (
     expiration_block_number bigint,
     tx_hash bytea NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (eon, identity_prefix, sender)
+    PRIMARY KEY (eon, identity)
 );

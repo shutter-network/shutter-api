@@ -13,6 +13,3 @@ sql:
         overrides:
             - column: "event_identity_registration.expiration_block_number"
               go_type: "int64"
-            - column: "event_identity_registration.expiration_block_number"
-              go_type: "int64"
-              nullable: true

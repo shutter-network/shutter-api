@@ -205,11 +205,19 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			if registrationData.Timestamp%5 != 0 {
+				err := httpError.NewHttpError(
+					fmt.Sprintf("Timestamp not aligned with block time, decryption is processed based on Gnosis block time, please retry after %d seconds.", registrationData.Timestamp%5),
+					"",
+					http.StatusAccepted,
+				)
+				return nil, &err
+			}
 			// no data found try querying from other keyper via http
 			decKey, err := uc.getDecryptionKeyFromExternalKeyper(ctx, int64(registrationData.Eon), identity)
 			if err != nil {
 				err := httpError.NewHttpError(
-					err.Error(),
+					fmt.Sprintf("error while querying decryption key from external keyper: %s", err.Error()),
 					"",
 					http.StatusInternalServerError,
 				)

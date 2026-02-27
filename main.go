@@ -187,6 +187,13 @@ func main() {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
 	}
+	// Event API is enabled by default; set DISABLE_EVENT_API=true to disable
+	config.DisableEventAPI = false
+	if s := os.Getenv("DISABLE_EVENT_API"); s != "" {
+		if b, err := strconv.ParseBool(s); err == nil {
+			config.DisableEventAPI = b
+		}
+	}
 	app := router.NewRouter(ctx, db, contract, client, config)
 	watcher := watcher.NewWatcher(config, db)
 	group, deferFn := service.RunBackground(ctx, watcher)

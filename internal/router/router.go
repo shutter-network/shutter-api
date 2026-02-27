@@ -44,6 +44,7 @@ func NewRouter(
 		}
 
 		eventGroup := api.Group("/event")
+		eventGroup.Use(middleware.EventAPIGuard(config))
 		{
 			eventGroup.POST("/compile_trigger_definition", cryptoService.CompileEventTriggerDefinition)
 			eventGroup.POST("/register_identity", cryptoService.RegisterEventIdentity)

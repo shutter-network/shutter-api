@@ -80,6 +80,7 @@ func (s *TestShutterService) SetupSuite() {
 
 	s.config, err = common.NewConfig(keyperHTTPUrl, signingKey, &p2pConfig)
 	s.Require().NoError(err)
+	s.config.DisableEventAPI = false
 
 	rpc_url := os.Getenv("RPC_URL")
 	s.ethClient, err = ethclient.Dial(rpc_url)

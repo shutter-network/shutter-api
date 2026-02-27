@@ -1,0 +1,213 @@
+[
+  {
+    "name": "transfer_like",
+    "description": "TransferLike with to == DEST_ADDR and value >= TRANSFER_VALUE",
+    "eventSig": "event TransferLike(address indexed from, address indexed to, uint256 value)",
+    "args": [
+      { "name": "to", "op": "eq", "bytes": "${DEST_ADDR}" },
+      { "name": "value", "op": "gte", "number": "${TRANSFER_VALUE}" }
+    ],
+    "emitSig": "emitTransferLike(address,address,uint256)",
+    "emitArgs": ["${FROM_ADDR}", "${DEST_ADDR}", "${TRANSFER_VALUE}"],
+    "expected": "pass"
+  },
+  {
+    "name": "static_args",
+    "description": "StaticArgs baseline amount >= 42",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "amount", "op": "gte", "number": "42" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "dynamic_args",
+    "description": "DynamicArgs baseline",
+    "eventSig": "event DynamicArgs(string note, bytes blob, uint256[] nums)",
+    "args": [],
+    "emitSig": "emitDynamicSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "transfer_from_to_eq",
+    "description": "TransferLike with from == FROM_ADDR and to == DEST_ADDR",
+    "eventSig": "event TransferLike(address indexed from, address indexed to, uint256 value)",
+    "args": [
+      { "name": "from", "op": "eq", "bytes": "${FROM_ADDR}" },
+      { "name": "to", "op": "eq", "bytes": "${DEST_ADDR}" }
+    ],
+    "emitSig": "emitTransferLike(address,address,uint256)",
+    "emitArgs": ["${FROM_ADDR}", "${DEST_ADDR}", "${TRANSFER_VALUE}"],
+    "expected": "pass"
+  },
+  {
+    "name": "transfer_value_eq",
+    "description": "TransferLike with exact value match",
+    "eventSig": "event TransferLike(address indexed from, address indexed to, uint256 value)",
+    "args": [
+      { "name": "to", "op": "eq", "bytes": "${DEST_ADDR}" },
+      { "name": "value", "op": "eq", "number": "${TRANSFER_VALUE}" }
+    ],
+    "emitSig": "emitTransferLike(address,address,uint256)",
+    "emitArgs": ["${FROM_ADDR}", "${DEST_ADDR}", "${TRANSFER_VALUE}"],
+    "expected": "pass"
+  },
+  {
+    "name": "transfer_value_gt",
+    "description": "TransferLike with value > 1",
+    "eventSig": "event TransferLike(address indexed from, address indexed to, uint256 value)",
+    "args": [
+      { "name": "to", "op": "eq", "bytes": "${DEST_ADDR}" },
+      { "name": "value", "op": "gt", "number": "1" }
+    ],
+    "emitSig": "emitTransferLike(address,address,uint256)",
+    "emitArgs": ["${FROM_ADDR}", "${DEST_ADDR}", "${TRANSFER_VALUE}"],
+    "expected": "pass"
+  },
+  {
+    "name": "indexed_dynamic",
+    "description": "IndexedDynamic baseline with no predicates",
+    "eventSig": "event IndexedDynamic(string indexed note, bytes indexed blob)",
+    "args": [],
+    "emitSig": "emitIndexedDynamicSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "indexed_dynamic_note_eq",
+    "description": "IndexedDynamic with note == keccak256(\"hello\")",
+    "eventSig": "event IndexedDynamic(string indexed note, bytes indexed blob)",
+    "args": [
+      { "name": "note", "op": "eq", "bytes": "0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8" }
+    ],
+    "emitSig": "emitIndexedDynamicSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "indexed_dynamic_blob_eq",
+    "description": "IndexedDynamic with blob == keccak256(0xbeef)",
+    "eventSig": "event IndexedDynamic(string indexed note, bytes indexed blob)",
+    "args": [
+      { "name": "blob", "op": "eq", "bytes": "0x50cc9609ed13c878caf0b7ac27b34f56c318680963224914c6ea863d460f8a7f" }
+    ],
+    "emitSig": "emitIndexedDynamicSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "indexed_dynamic_note_blob_eq",
+    "description": "IndexedDynamic with both note and blob predicates",
+    "eventSig": "event IndexedDynamic(string indexed note, bytes indexed blob)",
+    "args": [
+      { "name": "note", "op": "eq", "bytes": "0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8" },
+      { "name": "blob", "op": "eq", "bytes": "0x50cc9609ed13c878caf0b7ac27b34f56c318680963224914c6ea863d460f8a7f" }
+    ],
+    "emitSig": "emitIndexedDynamicSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "static_amount_eq",
+    "description": "StaticArgs with exact amount match",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "amount", "op": "eq", "number": "42" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "static_custom_all_fields_eq",
+    "description": "StaticArgs custom emit, all fields exact match",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "user", "op": "eq", "bytes": "0x2222222222222222222222222222222222222222" },
+      { "name": "ok", "op": "eq", "bytes": "0x00" },
+      { "name": "sig", "op": "eq", "bytes": "0x12345678" },
+      { "name": "tag", "op": "eq", "bytes": "0x746573742d746167000000000000000000000000000000000000000000000000" },
+      { "name": "amount", "op": "eq", "number": "777" }
+    ],
+    "emitSig": "emitStaticCustom(address,bool,bytes4,bytes32,uint256)",
+    "emitArgs": [
+      "0x2222222222222222222222222222222222222222",
+      "false",
+      "0x12345678",
+      "0x746573742d746167000000000000000000000000000000000000000000000000",
+      "777"
+    ],
+    "expected": "pass",
+    "knownIssue": "Currently fails potentially due to bytes32 bug"
+  },
+  {
+    "name": "static_user_eq",
+    "description": "StaticArgs sample with user address predicate (non-indexed address)",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "user", "op": "eq", "bytes": "0x1111111111111111111111111111111111111111" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "static_sig_eq",
+    "description": "StaticArgs sample with bytes4 signature predicate (non-indexed bytes4)",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "sig", "op": "eq", "bytes": "0xdeadbeef" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "pass",
+    "knownIssue": "Currently fails due to issue with bytes4 / issue with unindexed offsets"
+  },
+  {
+    "name": "static_tag_eq",
+    "description": "StaticArgs sample with bytes32 tag predicate (padding-sensitive)",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "tag", "op": "eq", "bytes": "0x7461670000000000000000000000000000000000000000000000000000000000" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "pass",
+    "knownIssue": "Currently fails due to issue with unindexed offsets"
+  },
+  {
+    "name": "static_custom_order_permuted",
+    "description": "StaticArgs custom emit with same predicates but permuted order (offset/order diagnostic)",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "amount", "op": "eq", "number": "777" },
+      { "name": "sig", "op": "eq", "bytes": "0x12345678" },
+      { "name": "user", "op": "eq", "bytes": "0x2222222222222222222222222222222222222222" }
+    ],
+    "emitSig": "emitStaticCustom(address,bool,bytes4,bytes32,uint256)",
+    "emitArgs": [
+      "0x2222222222222222222222222222222222222222",
+      "false",
+      "0x12345678",
+      "0x746573742d746167000000000000000000000000000000000000000000000000",
+      "777"
+    ],
+    "expected": "pass",
+    "knownIssue": "Currently fails due to issue with unindexed offsets"
+  },
+  {
+    "name": "static_sig_wrong_len_compile_fail",
+    "description": "Compile should fail: bytes4 predicate provided with 3 bytes",
+    "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",
+    "args": [
+      { "name": "sig", "op": "eq", "bytes": "0x123456" }
+    ],
+    "emitSig": "emitStaticSample()",
+    "emitArgs": [],
+    "expected": "fail",
+    "knownIssue": "No error thrown at compile time"
+  }
+]

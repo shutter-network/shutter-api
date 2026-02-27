@@ -9,6 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.15.11
 	github.com/gin-contrib/cors v1.7.3
 	github.com/jackc/pgx/v5 v5.7.1
+	github.com/joho/godotenv v1.5.1
 	github.com/libp2p/go-libp2p-pubsub v0.13.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/shutter-network/contracts/v2 v2.0.0-beta.2.0.20250908105003-7e53b1579b04

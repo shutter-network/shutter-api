@@ -327,9 +327,9 @@ paths:
         name: eon
         required: true
         type: integer
-      - description: Identity prefix associated with the event identity registration.
+      - description: Identity associated with the event identity registration.
         in: query
-        name: identityPrefix
+        name: identity
         required: true
         type: string
       produces:

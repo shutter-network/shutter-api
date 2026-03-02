@@ -13,7 +13,7 @@ type Config struct {
 	SigningKey      *ecdsa.PrivateKey
 	PublicKey       *ecdsa.PublicKey
 	P2P             *p2p.Config
-	DisableEventAPI bool // when false, event API endpoints are registered (e.g. DISABLE_EVENT_API=false)
+	DisableEventAPI bool // true when SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS is not configured; if true, event API endpoints are not registered
 }
 
 func NewConfig(keyperHTTPUrl string, signingKey *ecdsa.PrivateKey, p2pConfig *p2p.Config) (*Config, error) {

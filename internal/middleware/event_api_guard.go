@@ -8,7 +8,8 @@ import (
 	sherror "github.com/shutter-network/shutter-api/internal/error"
 )
 
-// EventAPIGuard returns 501 Not Implemented when EventAPIEnabled is false.
+// EventAPIGuard returns 501 Not Implemented when DisableEventAPI is true
+// (i.e., when SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS is not configured).
 // When enabled, requests proceed to the event handlers.
 func EventAPIGuard(config *common.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {

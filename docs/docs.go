@@ -288,8 +288,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Identity prefix associated with the event identity registration.",
-                        "name": "identityPrefix",
+                        "description": "Identity associated with the event identity registration.",
+                        "name": "identity",
                         "in": "query",
                         "required": true
                     }

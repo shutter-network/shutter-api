@@ -47,7 +47,7 @@ type GetEventTriggerExpirationBlockResponse struct {
 	ExpirationBlockNumber uint64 `json:"expiration_block_number" example:"12345678"`
 } // @name GetEventTriggerExpirationBlock
 
-func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
+func EventTriggerDefinitionFromRequest(req EventTriggerDefinitionRequest) (shs.EventTriggerDefinition, []error) {
 	var errors []error
 	zeroAddress := ecommon.Address{}
 	if req.ContractAddress == zeroAddress {
@@ -94,7 +94,11 @@ func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (E
 		)
 		errors = append(errors, err)
 	}
+	return etd, errors
+}
 
+func CompileEventTriggerDefinitionInternal(req EventTriggerDefinitionRequest) (EventTriggerDefinitionResponse, []error) {
+	etd, errors := EventTriggerDefinitionFromRequest(req)
 	data := EventTriggerDefinitionResponse{EventTriggerDefinition: common.PrefixWith0x(hex.EncodeToString(etd.MarshalBytes()))}
 	return data, errors
 }

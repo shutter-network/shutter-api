@@ -108,13 +108,12 @@ func TestMyEVM(t *testing.T) {
 
 	signature := sig["ValueChanged"]
 
-	etdr, errs := usecase.CompileEventTriggerDefinitionInternal(usecase.EventTriggerDefinitionRequest{
+	etd, errs := usecase.EventTriggerDefinitionFromRequest(usecase.EventTriggerDefinitionRequest{
 		EventSignature:  signature,
 		ContractAddress: setup.contractAddress,
 		Arguments:       args,
 	})
 	assert.Equal(t, len(errs), 0, "there were errors compiling")
-	etd := etdr.EventTriggerDefinition
 	// etd := shs.EventTriggerDefinition{
 	// 	Contract: vLog.Address,
 	// 	LogPredicates: []shs.LogPredicate{

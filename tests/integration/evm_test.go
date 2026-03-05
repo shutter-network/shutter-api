@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -100,20 +101,13 @@ func SigFromABI(evt abi.Event) string {
 	return b.String()
 }
 
-func TestMyEVM(t *testing.T) {
-	setup := setupBackend(t)
-
-	// call a function that emits an event
-	tx, err := setup.contract.EmitValueChanged(setup.auth, big.NewInt(42))
-	assert.NilError(t, err, "failed to emit event: %v", err)
-
+func AssertMatch(t *testing.T, setup Setup, tx *types.Transaction, name string, argumentsBody string) {
 	vLog, err := collectLog(t, setup, tx)
 	assert.NilError(t, err, "failure when collecting log: %v", err)
 
-	argumentsBody := `[{"name": "value", "op": "eq", "number": "5"}]`
 	abi, err := EmitterMetaData.GetAbi()
 	assert.NilError(t, err, "error getting ABI: %v", err)
-	signature := SigFromABI(abi.Events["ValueChanged"])
+	signature := SigFromABI(abi.Events[name])
 
 	var args []usecase.EventArgument
 	err = json.NewDecoder(strings.NewReader(argumentsBody)).Decode(&args)
@@ -124,8 +118,35 @@ func TestMyEVM(t *testing.T) {
 		ContractAddress: setup.contractAddress,
 		Arguments:       args,
 	})
+	fmt.Println(etd)
+	fmt.Println(vLog)
 	assert.Equal(t, len(errs), 0, "there were errors compiling: %v", errs)
 	match, err := etd.Match(vLog)
 	assert.NilError(t, err, "error matching")
 	assert.Check(t, match, "did not match")
+}
+
+func TestMyEVM(t *testing.T) {
+	setup := setupBackend(t)
+
+	// call a function that emits an event
+	// event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, string four);
+	four := "Foo"
+	tx, err := setup.contract.EmitFour(
+		setup.auth,
+		big.NewInt(41),
+		big.NewInt(42),
+		big.NewInt(43),
+		four,
+	)
+	assert.NilError(t, err, "failed to emit event: %v", err)
+
+	hexfour := hex.EncodeToString([]byte(four))
+	AssertMatch(
+		t,
+		setup,
+		tx,
+		"Four",
+		`[{"name": "four", "op": "eq", "bytes": "0x`+hexfour+`"}]`,
+	)
 }

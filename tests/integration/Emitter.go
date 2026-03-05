@@ -31,8 +31,8 @@ var (
 
 // EmitterMetaData contains all meta data concerning the Emitter contract.
 var EmitterMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"one\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"two\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"three\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"four\",\"type\":\"uint256\"}],\"name\":\"Four\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"ValueChanged\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"one\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"two\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"three\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"four\",\"type\":\"uint256\"}],\"name\":\"emitFour\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"emitValueChanged\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x6080604052348015600e575f5ffd5b5061026b8061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c80638c371deb14610038578063ea4c0dda14610054575b5f5ffd5b610052600480360381019061004d9190610123565b610070565b005b61006e60048036038101906100699190610187565b6100b0565b005b8183857fc976bb9064fc5bb5ef2b52e9809965f4a1bb771fac31a4937d151ca668c8c63c846040516100a291906101c1565b60405180910390a450505050565b807f2db947ef788961acc438340dbcb4e242f80d026b621b7c98ee3061995039038260056040516100e1919061021c565b60405180910390a250565b5f5ffd5b5f819050919050565b610102816100f0565b811461010c575f5ffd5b50565b5f8135905061011d816100f9565b92915050565b5f5f5f5f6080858703121561013b5761013a6100ec565b5b5f6101488782880161010f565b94505060206101598782880161010f565b935050604061016a8782880161010f565b925050606061017b8782880161010f565b91505092959194509250565b5f6020828403121561019c5761019b6100ec565b5b5f6101a98482850161010f565b91505092915050565b6101bb816100f0565b82525050565b5f6020820190506101d45f8301846101b2565b92915050565b5f819050919050565b5f819050919050565b5f6102066102016101fc846101da565b6101e3565b6100f0565b9050919050565b610216816101ec565b82525050565b5f60208201905061022f5f83018461020d565b9291505056fea2646970667358221220d1113239e469edc93e92ba2a9571997c5ea9e279dadc16f8a8a758f4bda9deb764736f6c634300081c0033",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"one\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"two\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"three\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"four\",\"type\":\"string\"}],\"name\":\"Four\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"ValueChanged\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"one\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"two\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"three\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"four\",\"type\":\"string\"}],\"name\":\"emitFour\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"emitValueChanged\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600e575f5ffd5b506104288061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c8063b7047b6714610038578063ea4c0dda14610054575b5f5ffd5b610052600480360381019061004d919061026c565b610070565b005b61006e600480360381019061006991906102ec565b6100b0565b005b8183857f18a815ae98ce3e12272353f42a21c3b1283cf950a001e8b677e79e4ba8ce7fdc846040516100a29190610377565b60405180910390a450505050565b807f2db947ef788961acc438340dbcb4e242f80d026b621b7c98ee3061995039038260056040516100e191906103d9565b60405180910390a250565b5f604051905090565b5f5ffd5b5f5ffd5b5f819050919050565b61010f816100fd565b8114610119575f5ffd5b50565b5f8135905061012a81610106565b92915050565b5f5ffd5b5f5ffd5b5f601f19601f8301169050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b61017e82610138565b810181811067ffffffffffffffff8211171561019d5761019c610148565b5b80604052505050565b5f6101af6100ec565b90506101bb8282610175565b919050565b5f67ffffffffffffffff8211156101da576101d9610148565b5b6101e382610138565b9050602081019050919050565b828183375f83830152505050565b5f61021061020b846101c0565b6101a6565b90508281526020810184848401111561022c5761022b610134565b5b6102378482856101f0565b509392505050565b5f82601f83011261025357610252610130565b5b81356102638482602086016101fe565b91505092915050565b5f5f5f5f60808587031215610284576102836100f5565b5b5f6102918782880161011c565b94505060206102a28782880161011c565b93505060406102b38782880161011c565b925050606085013567ffffffffffffffff8111156102d4576102d36100f9565b5b6102e08782880161023f565b91505092959194509250565b5f60208284031215610301576103006100f5565b5b5f61030e8482850161011c565b91505092915050565b5f81519050919050565b5f82825260208201905092915050565b8281835e5f83830152505050565b5f61034982610317565b6103538185610321565b9350610363818560208601610331565b61036c81610138565b840191505092915050565b5f6020820190508181035f83015261038f818461033f565b905092915050565b5f819050919050565b5f819050919050565b5f6103c36103be6103b984610397565b6103a0565b6100fd565b9050919050565b6103d3816103a9565b82525050565b5f6020820190506103ec5f8301846103ca565b9291505056fea2646970667358221220179edb3547c0e643891adb1478550b93450d338769066c55f6b8b4448b71945164736f6c634300081c0033",
 }
 
 // EmitterABI is the input ABI used to generate the binding from.
@@ -202,24 +202,24 @@ func (_Emitter *EmitterTransactorRaw) Transact(opts *bind.TransactOpts, method s
 	return _Emitter.Contract.contract.Transact(opts, method, params...)
 }
 
-// EmitFour is a paid mutator transaction binding the contract method 0x8c371deb.
+// EmitFour is a paid mutator transaction binding the contract method 0xb7047b67.
 //
-// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, uint256 four) returns()
-func (_Emitter *EmitterTransactor) EmitFour(opts *bind.TransactOpts, one *big.Int, two *big.Int, three *big.Int, four *big.Int) (*types.Transaction, error) {
+// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, string four) returns()
+func (_Emitter *EmitterTransactor) EmitFour(opts *bind.TransactOpts, one *big.Int, two *big.Int, three *big.Int, four string) (*types.Transaction, error) {
 	return _Emitter.contract.Transact(opts, "emitFour", one, two, three, four)
 }
 
-// EmitFour is a paid mutator transaction binding the contract method 0x8c371deb.
+// EmitFour is a paid mutator transaction binding the contract method 0xb7047b67.
 //
-// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, uint256 four) returns()
-func (_Emitter *EmitterSession) EmitFour(one *big.Int, two *big.Int, three *big.Int, four *big.Int) (*types.Transaction, error) {
+// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, string four) returns()
+func (_Emitter *EmitterSession) EmitFour(one *big.Int, two *big.Int, three *big.Int, four string) (*types.Transaction, error) {
 	return _Emitter.Contract.EmitFour(&_Emitter.TransactOpts, one, two, three, four)
 }
 
-// EmitFour is a paid mutator transaction binding the contract method 0x8c371deb.
+// EmitFour is a paid mutator transaction binding the contract method 0xb7047b67.
 //
-// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, uint256 four) returns()
-func (_Emitter *EmitterTransactorSession) EmitFour(one *big.Int, two *big.Int, three *big.Int, four *big.Int) (*types.Transaction, error) {
+// Solidity: function emitFour(uint256 one, uint256 two, uint256 three, string four) returns()
+func (_Emitter *EmitterTransactorSession) EmitFour(one *big.Int, two *big.Int, three *big.Int, four string) (*types.Transaction, error) {
 	return _Emitter.Contract.EmitFour(&_Emitter.TransactOpts, one, two, three, four)
 }
 
@@ -316,13 +316,13 @@ type EmitterFour struct {
 	One   *big.Int
 	Two   *big.Int
 	Three *big.Int
-	Four  *big.Int
+	Four  string
 	Raw   types.Log // Blockchain specific contextual infos
 }
 
-// FilterFour is a free log retrieval operation binding the contract event 0xc976bb9064fc5bb5ef2b52e9809965f4a1bb771fac31a4937d151ca668c8c63c.
+// FilterFour is a free log retrieval operation binding the contract event 0x18a815ae98ce3e12272353f42a21c3b1283cf950a001e8b677e79e4ba8ce7fdc.
 //
-// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, uint256 four)
+// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, string four)
 func (_Emitter *EmitterFilterer) FilterFour(opts *bind.FilterOpts, one []*big.Int, two []*big.Int, three []*big.Int) (*EmitterFourIterator, error) {
 
 	var oneRule []interface{}
@@ -345,9 +345,9 @@ func (_Emitter *EmitterFilterer) FilterFour(opts *bind.FilterOpts, one []*big.In
 	return &EmitterFourIterator{contract: _Emitter.contract, event: "Four", logs: logs, sub: sub}, nil
 }
 
-// WatchFour is a free log subscription operation binding the contract event 0xc976bb9064fc5bb5ef2b52e9809965f4a1bb771fac31a4937d151ca668c8c63c.
+// WatchFour is a free log subscription operation binding the contract event 0x18a815ae98ce3e12272353f42a21c3b1283cf950a001e8b677e79e4ba8ce7fdc.
 //
-// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, uint256 four)
+// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, string four)
 func (_Emitter *EmitterFilterer) WatchFour(opts *bind.WatchOpts, sink chan<- *EmitterFour, one []*big.Int, two []*big.Int, three []*big.Int) (event.Subscription, error) {
 
 	var oneRule []interface{}
@@ -395,9 +395,9 @@ func (_Emitter *EmitterFilterer) WatchFour(opts *bind.WatchOpts, sink chan<- *Em
 	}), nil
 }
 
-// ParseFour is a log parse operation binding the contract event 0xc976bb9064fc5bb5ef2b52e9809965f4a1bb771fac31a4937d151ca668c8c63c.
+// ParseFour is a log parse operation binding the contract event 0x18a815ae98ce3e12272353f42a21c3b1283cf950a001e8b677e79e4ba8ce7fdc.
 //
-// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, uint256 four)
+// Solidity: event Four(uint256 indexed one, uint256 indexed two, uint256 indexed three, string four)
 func (_Emitter *EmitterFilterer) ParseFour(log types.Log) (*EmitterFour, error) {
 	event := new(EmitterFour)
 	if err := _Emitter.contract.UnpackLog(event, "Four", log); err != nil {

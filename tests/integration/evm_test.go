@@ -11,6 +11,7 @@ import (
 
 	"gotest.tools/assert"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -80,6 +81,25 @@ func collectLog(t *testing.T, setup Setup, tx *types.Transaction) (*types.Log, e
 	return receipt.Logs[0], nil
 }
 
+func SigFromABI(evt abi.Event) string {
+	var b strings.Builder
+	b.WriteString(evt.RawName)
+	b.WriteString("(")
+	for i, arg := range evt.Inputs {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(arg.Type.String())
+		b.WriteString(" ")
+		if arg.Indexed {
+			b.WriteString("indexed ")
+		}
+		b.WriteString(arg.Name)
+	}
+	b.WriteString(")")
+	return b.String()
+}
+
 func TestMyEVM(t *testing.T) {
 	setup := setupBackend(t)
 
@@ -89,56 +109,22 @@ func TestMyEVM(t *testing.T) {
 
 	vLog, err := collectLog(t, setup, tx)
 	assert.NilError(t, err, "failure when collecting log: %v", err)
-	// fmt.Println("Topics:")
-	// fmt.Println(vLog)
-	// for i, topic := range vLog.Topics {
-	// 	fmt.Printf("  Topic %d: %s\n", i, topic.Hex())
-	// }
-	// fmt.Printf("Data: %s\n", common.Bytes2Hex(vLog.Data))
 
 	argumentsBody := `[{"name": "value", "op": "eq", "number": "5"}]`
-
-	var sig map[string]string
-	err = json.NewDecoder(strings.NewReader(EmitterMetaData.ABI)).Decode(&sig)
-	assert.NilError(t, err, "invalid json")
+	abi, err := EmitterMetaData.GetAbi()
+	assert.NilError(t, err, "error getting ABI: %v", err)
+	signature := SigFromABI(abi.Events["ValueChanged"])
 
 	var args []usecase.EventArgument
 	err = json.NewDecoder(strings.NewReader(argumentsBody)).Decode(&args)
 	assert.NilError(t, err, "invalid json")
-
-	signature := sig["ValueChanged"]
 
 	etd, errs := usecase.EventTriggerDefinitionFromRequest(usecase.EventTriggerDefinitionRequest{
 		EventSignature:  signature,
 		ContractAddress: setup.contractAddress,
 		Arguments:       args,
 	})
-	assert.Equal(t, len(errs), 0, "there were errors compiling")
-	// etd := shs.EventTriggerDefinition{
-	// 	Contract: vLog.Address,
-	// 	LogPredicates: []shs.LogPredicate{
-	// 		{
-	// 			LogValueRef: shs.LogValueRef{
-	// 				Offset: 1,
-	// 				Length: 1,
-	// 			},
-	// 			ValuePredicate: shs.ValuePredicate{
-	// 				Op:       shs.BytesEq,
-	// 				ByteArgs: [][]byte{common.BigToHash(big.NewInt(42)).Bytes()},
-	// 			},
-	// 		},
-	// 		{
-	// 			LogValueRef: shs.LogValueRef{
-	// 				Offset: 4,
-	// 				Length: 1,
-	// 			},
-	// 			ValuePredicate: shs.ValuePredicate{
-	// 				Op:      shs.UintEq,
-	// 				IntArgs: []*big.Int{big.NewInt(5)},
-	// 			},
-	// 		},
-	// 	},
-	// }
+	assert.Equal(t, len(errs), 0, "there were errors compiling: %v", errs)
 	match, err := etd.Match(vLog)
 	assert.NilError(t, err, "error matching")
 	assert.Check(t, match, "did not match")

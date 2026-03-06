@@ -187,8 +187,10 @@ func main() {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
 	}
-	// Disable event API if event registry contract address is not configured
-	config.DisableEventAPI = shutterEventRegistryContractAddressStringified == ""
+	// Disable event API if event registry contract address is invalid or empty or zero address
+	config.DisableEventAPI =
+		!common.IsHexAddress(shutterEventRegistryContractAddressStringified) ||
+			shutterEventRegistryContractAddress == (common.Address{})
 	if config.DisableEventAPI {
 		log.Info().Msg("Event API disabled: SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS not configured")
 	}

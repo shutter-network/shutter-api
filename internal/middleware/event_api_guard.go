@@ -15,8 +15,8 @@ func EventAPIGuard(config *common.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if config.DisableEventAPI {
 			err := sherror.NewHttpError(
-				"Service is unavailable.",
-				"Service is unavailable.",
+				"Event API is disabled on this deployment",
+				"Event API is disabled on this deployment",
 				http.StatusNotImplemented,
 			)
 			ctx.Error(err)

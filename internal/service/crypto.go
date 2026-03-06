@@ -54,6 +54,7 @@ func NewCryptoService(
 //		@Failure		404			{object}	error.Http							"Decryption key not found for the associated identity."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
+//		@Failure		501			{object}	error.Http							"Event API is disabled on this deployment."
 //	 	@Security		BearerAuth
 //		@Router			/event/get_decryption_key [get]
 func (svc *CryptoService) GetEventDecryptionKey(ctx *gin.Context) {
@@ -188,6 +189,7 @@ func (svc *CryptoService) GetDataForEncryptionTime(ctx *gin.Context) {
 //		@Failure		400				{object}	error.Http								"Invalid Get data for encryption request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
+//		@Failure		501			{object}	error.Http							"Event API is disabled on this deployment."
 //	 	@Security		BearerAuth
 //		@Router			/event/get_data_for_encryption [get]
 func (svc *CryptoService) GetDataForEncryptionEvent(ctx *gin.Context) {
@@ -358,6 +360,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //	@Failure		400		{object}	error.Http							"Invalid Event Data."
 //	@Failure		429		{object}	error.Http							"Too many requests. Rate limited."
 //	@Failure		500		{object}	error.Http							"Internal server error."
+//	@Failure		501		{object}	error.Http							"Event API is disabled on this deployment."
 //	@Security		BearerAuth
 //	@Router			/event/compile_trigger_definition [post]
 func (svc *CryptoService) CompileEventTriggerDefinition(ctx *gin.Context) {
@@ -400,6 +403,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 //		@Failure		400		{object}	error.Http							"Invalid Register identity request."
 //		@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http						"Internal server error."
+//		@Failure		501			{object}	error.Http						"Event API is disabled on this deployment."
 //	 	@Security		BearerAuth
 //		@Router			/event/register_identity [post]
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
@@ -440,6 +444,7 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 //		@Failure		404		{object}	error.Http								"Event identity registration not found."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
+//		@Failure		501			{object}	error.Http							"Event API is disabled on this deployment."
 //	 	@Security		BearerAuth
 //		@Router			/event/get_trigger_expiration_block [get]
 func (svc *CryptoService) GetEventTriggerExpirationBlock(ctx *gin.Context) {

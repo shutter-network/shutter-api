@@ -1,6 +1,6 @@
 # Makefile for Emitter.sol
 
-.PHONY: all clean
+.PHONY: all clean test
 
 # Variables
 SOLC := solc
@@ -27,3 +27,5 @@ $(CONTRACT).go: $(CONTRACT).json
 clean:
 	rm -f $(CONTRACT).json $(CONTRACT).go
 
+test:
+	go test -run TestMyEVM

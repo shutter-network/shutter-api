@@ -227,6 +227,10 @@ paths:
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+        "501":
+          description: Event API is disabled on this deployment.
+          schema:
+            $ref: '#/definitions/error.Http'
       security:
       - BearerAuth: []
       summary: Allows clients to compile an event trigger definition string.
@@ -265,6 +269,10 @@ paths:
             $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "501":
+          description: Event API is disabled on this deployment.
           schema:
             $ref: '#/definitions/error.Http'
       security:
@@ -311,6 +319,10 @@ paths:
           description: Internal server error.
           schema:
             $ref: '#/definitions/error.Http'
+        "501":
+          description: Event API is disabled on this deployment.
+          schema:
+            $ref: '#/definitions/error.Http'
       security:
       - BearerAuth: []
       summary: Get decryption key.
@@ -327,9 +339,9 @@ paths:
         name: eon
         required: true
         type: integer
-      - description: Identity prefix associated with the event identity registration.
+      - description: Identity associated with the event identity registration.
         in: query
-        name: identityPrefix
+        name: identity
         required: true
         type: string
       produces:
@@ -354,6 +366,10 @@ paths:
             $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "501":
+          description: Event API is disabled on this deployment.
           schema:
             $ref: '#/definitions/error.Http'
       security:
@@ -391,6 +407,10 @@ paths:
             $ref: '#/definitions/error.Http'
         "500":
           description: Internal server error.
+          schema:
+            $ref: '#/definitions/error.Http'
+        "501":
+          description: Event API is disabled on this deployment.
           schema:
             $ref: '#/definitions/error.Http'
       security:

@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	KeyperHTTPURL *url.URL
-	SigningKey    *ecdsa.PrivateKey
-	PublicKey     *ecdsa.PublicKey
-	P2P           *p2p.Config
+	KeyperHTTPURL   *url.URL
+	SigningKey      *ecdsa.PrivateKey
+	PublicKey       *ecdsa.PublicKey
+	P2P             *p2p.Config
+	DisableEventAPI bool // true when SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS is not configured; if true, event API endpoints are not registered
 }
 
 func NewConfig(keyperHTTPUrl string, signingKey *ecdsa.PrivateKey, p2pConfig *p2p.Config) (*Config, error) {

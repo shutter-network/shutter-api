@@ -135,6 +135,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
                     }
                 }
             }
@@ -190,6 +196,12 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -258,6 +270,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
                     }
                 }
             }
@@ -288,8 +306,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Identity prefix associated with the event identity registration.",
-                        "name": "identityPrefix",
+                        "description": "Identity associated with the event identity registration.",
+                        "name": "identity",
                         "in": "query",
                         "required": true
                     }
@@ -321,6 +339,12 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -375,6 +399,12 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }

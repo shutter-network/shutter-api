@@ -126,6 +126,12 @@
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
                     }
                 }
             }
@@ -181,6 +187,12 @@
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -249,6 +261,12 @@
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
                     }
                 }
             }
@@ -279,8 +297,8 @@
                     },
                     {
                         "type": "string",
-                        "description": "Identity prefix associated with the event identity registration.",
-                        "name": "identityPrefix",
+                        "description": "Identity associated with the event identity registration.",
+                        "name": "identity",
                         "in": "query",
                         "required": true
                     }
@@ -312,6 +330,12 @@
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }
@@ -366,6 +390,12 @@
                     },
                     "500": {
                         "description": "Internal server error.",
+                        "schema": {
+                            "$ref": "#/definitions/error.Http"
+                        }
+                    },
+                    "501": {
+                        "description": "Event API is disabled on this deployment.",
                         "schema": {
                             "$ref": "#/definitions/error.Http"
                         }

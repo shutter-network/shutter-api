@@ -12,7 +12,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.13.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/shutter-network/contracts/v2 v2.0.0-beta.2.0.20250908105003-7e53b1579b04
-	github.com/shutter-network/rolling-shutter/rolling-shutter v0.0.7-0.20251208133535-1ceca5ea26d9
+	github.com/shutter-network/rolling-shutter/rolling-shutter v0.0.7-0.20260319182858-0ebd3fda07fd
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4

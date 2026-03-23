@@ -129,9 +129,11 @@ func Topic0(sig sigparser.Signature) shs.LogPredicate {
 func offsetByName(inputs []sigparser.Parameter) map[string]uint64 {
 	offsets := make(map[string]uint64, len(inputs))
 	nonIndexed := uint64(4)
-	for i, input := range inputs {
+	indexed := uint64(1)
+	for _, input := range inputs {
 		if input.Indexed {
-			offsets[input.Name] = uint64(i + 1)
+			offsets[input.Name] = indexed
+			indexed += 1
 		} else {
 			offsets[input.Name] = nonIndexed
 			nonIndexed += 1

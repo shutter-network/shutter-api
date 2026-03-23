@@ -192,6 +192,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 				lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
 				// input is data argument:
 			} else {
+				lp.LogValueRef.Dynamic = isDynamicType(input.Type)
 				if input.Type != "uint256" {
 					val, err := hexutil.Decode(arg.Bytes)
 					if err != nil {
@@ -229,6 +230,17 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 		}
 	}
 	return lps, nil
+}
+
+func isDynamicType(typeName string) bool {
+	switch typeName {
+	case "bytes":
+		return true
+	case "string":
+		return true
+	default:
+		return false
+	}
 }
 
 func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTriggerDefinitionHex string, identityPrefixStringified string, ttl uint64) (*RegisterIdentityResponse, *httpError.Http) {

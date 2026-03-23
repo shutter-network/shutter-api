@@ -241,18 +241,18 @@ func TestWithEVM(t *testing.T) {
 	jFour := fmt.Sprintf(`{"name": "four", "op": "eq", "bytes": "%v"}`, hexutil.Encode([]byte(four)))
 
 	mFour := shs.LogPredicate{
-		LogValueRef:    shs.LogValueRef{Offset: 4},
+		LogValueRef:    shs.LogValueRef{Offset: 4, Dynamic: true},
 		ValuePredicate: shs.ValuePredicate{Op: shs.BytesEq, ByteArgs: [][]byte{four}},
 	}
 	jNoMFour := fmt.Sprintf(`{"name": "four", "op": "eq", "bytes": "%v"}`, hexutil.Encode([]byte("no match")))
 	noMFour := shs.LogPredicate{
-		LogValueRef:    shs.LogValueRef{Offset: 4},
+		LogValueRef:    shs.LogValueRef{Offset: 4, Dynamic: true},
 		ValuePredicate: shs.ValuePredicate{Op: shs.BytesEq, ByteArgs: [][]byte{[]byte("no match")}},
 	}
 	preFour := []byte("first and slightly longer arg that should use more space and if ")
 	jPreNotFour := fmt.Sprintf(`{"name": "four", "op": "eq", "bytes": "%v"}`, hexutil.Encode([]byte(preFour)))
 	preNotFour := shs.LogPredicate{
-		LogValueRef:    shs.LogValueRef{Offset: 4},
+		LogValueRef:    shs.LogValueRef{Offset: 4, Dynamic: true},
 		ValuePredicate: shs.ValuePredicate{Op: shs.BytesEq, ByteArgs: [][]byte{preFour}},
 	}
 	five := big.NewInt(42)
@@ -261,7 +261,7 @@ func TestWithEVM(t *testing.T) {
 	six := []byte("second arg")
 	jSix := fmt.Sprintf(`{"name": "six", "op": "eq", "bytes": "%v"}`, hexutil.Encode(six))
 	mSix := shs.LogPredicate{
-		LogValueRef:    shs.LogValueRef{Offset: 6},
+		LogValueRef:    shs.LogValueRef{Offset: 6, Dynamic: true},
 		ValuePredicate: shs.ValuePredicate{Op: shs.BytesEq, ByteArgs: [][]byte{six}},
 	}
 

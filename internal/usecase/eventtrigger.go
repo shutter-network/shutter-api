@@ -119,7 +119,6 @@ func Topic0(sig sigparser.Signature) shs.LogPredicate {
 	}
 	b.WriteString(")")
 	lp := shs.LogPredicate{}
-	lp.LogValueRef.Length = 1
 	lp.LogValueRef.Offset = 0
 	h := crypto.Keccak256([]byte(b.String()))
 	lp.ValuePredicate.ByteArgs = [][]byte{h}
@@ -127,17 +126,20 @@ func Topic0(sig sigparser.Signature) shs.LogPredicate {
 	return lp
 }
 
-// indexedOffsetsForInputs returns topic offsets for indexed inputs in ABI order.
-func indexedOffsetsForInputs(inputs []sigparser.Parameter) []uint64 {
-	indexedOffsets := make([]uint64, len(inputs))
-	indexedCount := uint64(0)
-	for i, input := range inputs {
+func offsetByName(inputs []sigparser.Parameter) map[string]uint64 {
+	offsets := make(map[string]uint64, len(inputs))
+	nonIndexed := uint64(4)
+	indexed := uint64(1)
+	for _, input := range inputs {
 		if input.Indexed {
-			indexedOffsets[i] = 1 + indexedCount
-			indexedCount++
+			offsets[input.Name] = indexed
+			indexed += 1
+		} else {
+			offsets[input.Name] = nonIndexed
+			nonIndexed += 1
 		}
 	}
-	return indexedOffsets
+	return offsets
 }
 
 func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, error) {
@@ -148,9 +150,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 	}
 	lp := Topic0(sig)
 	lps = append(lps, lp)
-	indexedOffsets := indexedOffsetsForInputs(sig.Inputs)
-	nonIndexedOffset := uint64(4)
-	length := uint64(0)
+	offsets := offsetByName(sig.Inputs)
 	argnames := make([]string, len(args))
 	for i, arg := range args {
 		found := slices.IndexFunc(
@@ -171,7 +171,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 		}
 		argnames[i] = arg.Name
 	}
-	for inputIndex, input := range sig.Inputs {
+	for _, input := range sig.Inputs {
 		lp := shs.LogPredicate{}
 		i := slices.IndexFunc(
 			args,
@@ -187,15 +187,14 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 				if err != nil {
 					return lps, err
 				}
-				length = 1
 				if arg.Operator != "eq" {
 					return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
 				}
 				lp.ValuePredicate.Op = shs.BytesEq
 				lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-				lp.LogValueRef.Offset = indexedOffsets[inputIndex]
 				// input is data argument:
 			} else {
+				lp.LogValueRef.Dynamic = isDynamicType(input.Type)
 				if input.Type != "uint256" {
 					val, err := hexutil.Decode(arg.Bytes)
 					if err != nil {
@@ -205,8 +204,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 						return lps, fmt.Errorf("invalid operator '%v' for input '%v' of type '%v'", arg.Operator, input.Name, input.Type)
 					}
 					lp.ValuePredicate.Op = shs.BytesEq
-					lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-					length = uint64((len(val) / shs.Word)+1)
+					lp.ValuePredicate.ByteArgs = [][]byte{val}
 				} else {
 					switch strings.ToLower(arg.Operator) {
 					case "lt":
@@ -227,17 +225,24 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 						return lps, fmt.Errorf("cannot interpret %v as a decimal string (don't use literal int)", arg.Number)
 					}
 					lp.ValuePredicate.IntArgs = []*big.Int{num}
-					length = 1
 				}
-
-				lp.LogValueRef.Offset = nonIndexedOffset
-				nonIndexedOffset += length
 			}
-			lp.LogValueRef.Length = length
+			lp.LogValueRef.Offset = offsets[arg.Name]
 			lps = append(lps, lp)
 		}
 	}
 	return lps, nil
+}
+
+func isDynamicType(typeName string) bool {
+	switch typeName {
+	case "bytes":
+		return true
+	case "string":
+		return true
+	default:
+		return false
+	}
 }
 
 func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTriggerDefinitionHex string, identityPrefixStringified string, ttl uint64) (*RegisterIdentityResponse, *httpError.Http) {

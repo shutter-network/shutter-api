@@ -285,29 +285,29 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		identityPrefix = block
 	}
 
-	blockNumber, err := uc.ethClient.BlockNumber(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for recent block",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
+	// blockNumber, err := uc.ethClient.BlockNumber(ctx)
+	// if err != nil {
+	// 	log.Err(err).Msg("err encountered while querying for recent block")
+	// 	metrics.TotalFailedRPCCalls.Inc()
+	// 	err := httpError.NewHttpError(
+	// 		"error encountered while querying for recent block",
+	// 		"",
+	// 		http.StatusInternalServerError,
+	// 	)
+	// 	return nil, &err
+	// }
 
-	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for keyper set index",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
+	// eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
+	// if err != nil {
+	// 	log.Err(err).Msg("err encountered while querying keyper set index")
+	// 	metrics.TotalFailedRPCCalls.Inc()
+	// 	err := httpError.NewHttpError(
+	// 		"error encountered while querying for keyper set index",
+	// 		"",
+	// 		http.StatusInternalServerError,
+	// 	)
+	// 	return nil, &err
+	// }
 
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {

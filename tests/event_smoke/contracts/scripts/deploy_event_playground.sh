@@ -4,6 +4,10 @@ set -euo pipefail
 # - set vars here or via env before running
 # - run forge create
 # - optionally verify via sourcify
+#
+# Usage:
+#   RPC_URL="https://rpc.chiadochain.net" PK="<private_key>" CHAIN="chiado" VERIFY="true" ./deploy_event_playground.sh
+#
 
 RPC_URL="${RPC_URL:-https://rpc.chiadochain.net}"
 PK="${PK:-${PRIVATE_KEY:-}}"

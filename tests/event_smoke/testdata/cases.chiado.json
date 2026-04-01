@@ -209,5 +209,90 @@
     "emitArgs": [],
     "expected": "fail",
     "knownIssue": "No error thrown at compile time"
+  },
+  {
+    "name": "dynamic_simple_baseline",
+    "description": "DynamicSimple baseline with no predicates",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "dynamic_simple_note_eq",
+    "description": "DynamicSimple with note == hello",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [
+      { "name": "note", "op": "eq", "bytes": "0x68656c6c6f" }
+    ],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "dynamic_simple_blob_eq",
+    "description": "DynamicSimple with blob == 0xbeef",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [
+      { "name": "blob", "op": "eq", "bytes": "0xbeef" }
+    ],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "dynamic_simple_note_blob_eq",
+    "description": "DynamicSimple with both note and blob predicates",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [
+      { "name": "note", "op": "eq", "bytes": "0x68656c6c6f" },
+      { "name": "blob", "op": "eq", "bytes": "0xbeef" }
+    ],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "pass"
+  },
+  {
+    "name": "dynamic_simple_note_mismatch",
+    "description": "DynamicSimple with wrong string value",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [
+      { "name": "note", "op": "eq", "bytes": "0x776f726c64" }
+    ],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "fail"
+  },
+  {
+    "name": "dynamic_simple_blob_mismatch",
+    "description": "DynamicSimple with wrong bytes value",
+    "eventSig": "event DynamicSimple(string note, bytes blob)",
+    "args": [
+      { "name": "blob", "op": "eq", "bytes": "0xdead" }
+    ],
+    "emitSig": "emitDynamicSimple()",
+    "emitArgs": [],
+    "expected": "fail"
+  },
+  {
+    "name": "struct_args_baseline",
+    "description": "StructArgs baseline with no predicates",
+    "eventSig": "event StructArgs((address addr, string name, uint256 balance) user, bool isActive)",
+    "args": [],
+    "emitSig": "emitStructSample()",
+    "emitArgs": [],
+    "expected": "pass",
+    "knownIssue": "Currently unsupported (struct as unindexed parameter)"
+  },
+  {
+    "name": "array_args_baseline",
+    "description": "ArrayArgs baseline with no predicates",
+    "eventSig": "event ArrayArgs(address[] accounts, bool[] flags)",
+    "args": [],
+    "emitSig": "emitArraySample()",
+    "emitArgs": [],
+    "expected": "pass",
+    "knownIssue": "Currently unsupported (arrays as unindexed parameters)"
   }
 ]

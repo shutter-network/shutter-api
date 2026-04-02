@@ -70,7 +70,8 @@ This documentation will guide you through:
 
 ### Rate limits / Authorization
 
-For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip:
+For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip.
+**Please note that we are currently in the process of deploying event-based triggers to Gnosis Mainnet and that they are not fully operational yet.**
 
   - `/time/register_identity` 5 requests per 24 hours
   - `/time/get_data_for_encryption` 10 requests per 24 hours
@@ -184,11 +185,14 @@ curl -X POST https://<API_BASE_URL>/event/compile_trigger_definition \
 }
 ```
 
-> **Note**: The object format for the "arguments" list is:
-> - `name`: The matching argument name from the event signature
-> - `op`: One of `lt`, `lte`, `eq`, `gte`, `gt` for comparison operations
-> - `number`: Integer argument for numeric comparisons
-> - `bytes`: Hex-encoded byte argument for non-numeric matches with `op == "eq"`
+> **Notes:**
+> - Arrays and structs are currently not supported in the arguments.
+> - The object format for the "arguments" list is:
+>   - `name`: The matching argument name from the event signature
+>   - `op`: One of `lt`, `lte`, `eq`, `gte`, `gt` for comparison operations
+>   - `number`: Integer argument for numeric comparisons
+>   - `bytes`: Hex-encoded byte argument for non-numeric matches with `op == "eq"`
+> - Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
 > 
 > The resulting condition for the trigger is a logical AND of all arguments given.
 

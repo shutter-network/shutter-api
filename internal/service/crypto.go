@@ -346,6 +346,7 @@ func (svc *CryptoService) DecryptCommitment(ctx *gin.Context) {
 //	@Description	- **bytes**: <hex encoded byte argument for non numeric matches with 'op==eq'>
 //	@Description
 //	@Description	**Notes:**
+//	@Description	- Arrays and structs are currently not supported in the arguments.
 //	@Description	- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
 //	@Description	- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
 //	@Description	- For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.

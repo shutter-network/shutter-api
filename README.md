@@ -108,11 +108,9 @@ Use the `/check_authentication` endpoint, to test your API key.
 ## Endpoints
 
 > [!IMPORTANT]
-> Endpoint rollout currently differs by network.
-> Chiado serves the latest endpoint set (including prefixed routes like `/time/*` and `/event/*`).
-> Gnosis Mainnet currently serves only legacy time-based endpoints (no `/time` prefix yet) and does not include
-event-based endpoints.
-> Check each network’s Swagger docs for exact paths.
+> The API under Chiado serves both time-based and event-based endpoints.
+> On Mainnet, time-based endpoints are fully operational, while event-based endpoints are under deployment.
+> Old endpoints all redirect to their `/time` equivalents.
 
 ### 1. Identity Registration
 

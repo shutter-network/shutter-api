@@ -144,7 +144,6 @@ paths:
         required: true
         type: string
       - description: Optional eon parameter for the identity.
-        format: int64
         in: query
         name: eon
         type: integer
@@ -155,7 +154,6 @@ paths:
           description: Success.
           schema:
             items:
-              format: int32
               type: integer
             type: array
         "400":
@@ -196,6 +194,7 @@ paths:
         - **bytes**: <hex encoded byte argument for non numeric matches with 'op==eq'>
 
         **Notes:**
+        - Arrays and structs are currently not supported in the arguments.
         - Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
         - For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.
         - For non‑indexed uint256, use a string of the number (i.e. "1234") with lt/lte/eq/gte/gt.
@@ -292,7 +291,6 @@ paths:
         required: true
         type: string
       - description: Optional eon parameter for the identity.
-        format: int64
         in: query
         name: eon
         type: integer
@@ -334,7 +332,6 @@ paths:
         registration.
       parameters:
       - description: Eon number associated with the event identity registration.
-        format: int64
         in: query
         name: eon
         required: true

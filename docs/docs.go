@@ -47,7 +47,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "Optional eon parameter for the identity.",
                         "name": "eon",
                         "in": "query"
@@ -59,8 +58,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "integer",
-                                "format": "int32"
+                                "type": "integer"
                             }
                         }
                     },
@@ -92,7 +90,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.\n**Example request body:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"contract\": \"0x953A0425ACCee2E05f22E78999c595eD2eE7183c\",\n\"eventSig\":\"event Transfer(address indexed from, address indexed to, uint256 amount)\",\n\"arguments\": [\n{\"name\": \"from\", \"op\": \"eq\", \"bytes\": \"0x812a6755975485C6E340F97dE6790B34a94D1430\"},\n{\"name\": \"amount\", \"op\": \"gte\", \"number\": \"2\"}]\n}\n` + "`" + `` + "`" + `` + "`" + `\n**The object format for the \"arguments\" list is:**\n- **name**: \u003cmatching argument name from signature. Example: \"from\"\u003e\n- **op**: \u003cone of: lt, lte, eq, gte, gt\u003e\n- **number**: \u003cinteger argument for numeric comparison. Example: \"2\"\u003e\n- **bytes**: \u003chex encoded byte argument for non numeric matches with 'op==eq'\u003e\n\n**Notes:**\n- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.\n- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.\n- For non‑indexed uint256, use a string of the number (i.e. \"1234\") with lt/lte/eq/gte/gt.\n- For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.\n- The resulting condition for the trigger is a logical AND of all arguments given.",
+                "description": "This endpoint takes an event signature snippet and some arguments to create an event trigger definition that will be understood by keypers supporting event based decryption triggers.\n**Example request body:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"contract\": \"0x953A0425ACCee2E05f22E78999c595eD2eE7183c\",\n\"eventSig\":\"event Transfer(address indexed from, address indexed to, uint256 amount)\",\n\"arguments\": [\n{\"name\": \"from\", \"op\": \"eq\", \"bytes\": \"0x812a6755975485C6E340F97dE6790B34a94D1430\"},\n{\"name\": \"amount\", \"op\": \"gte\", \"number\": \"2\"}]\n}\n` + "`" + `` + "`" + `` + "`" + `\n**The object format for the \"arguments\" list is:**\n- **name**: \u003cmatching argument name from signature. Example: \"from\"\u003e\n- **op**: \u003cone of: lt, lte, eq, gte, gt\u003e\n- **number**: \u003cinteger argument for numeric comparison. Example: \"2\"\u003e\n- **bytes**: \u003chex encoded byte argument for non numeric matches with 'op==eq'\u003e\n\n**Notes:**\n- Arrays and structs are currently not supported in the arguments.\n- Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.\n- For indexed dynamic types (string, bytes, arrays), pass keccak256(value) as hex.\n- For non‑indexed uint256, use a string of the number (i.e. \"1234\") with lt/lte/eq/gte/gt.\n- For other non‑indexed types, use bytes with 'op==eq' hex‑encoded value.\n- The resulting condition for the trigger is a logical AND of all arguments given.",
                 "produces": [
                     "application/json"
                 ],
@@ -234,7 +232,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "Optional eon parameter for the identity.",
                         "name": "eon",
                         "in": "query"
@@ -298,7 +295,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "Eon number associated with the event identity registration.",
                         "name": "eon",
                         "in": "query",

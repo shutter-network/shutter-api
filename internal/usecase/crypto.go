@@ -649,7 +649,7 @@ func (uc *CryptoUsecase) getDecryptionKeyFromExternalKeyper(ctx context.Context,
 		return "", errors.Wrapf(err, "failed to read keypers response body")
 	}
 
-	decryptionKey := string(body)
+	decryptionKey := strings.Trim(string(body), "\n\" ")
 
 	return decryptionKey, nil
 }

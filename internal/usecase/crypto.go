@@ -142,6 +142,38 @@ func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *ht
 	return newSigner, nil
 }
 
+func (uc *CryptoUsecase) resolveEon(ctx context.Context) (uint64, *httpError.Http) {
+	if uc.config != nil && uc.config.ConfiguredEon != nil {
+		return *uc.config.ConfiguredEon, nil
+	}
+
+	blockNumber, err := uc.ethClient.BlockNumber(ctx)
+	if err != nil {
+		log.Err(err).Msg("err encountered while querying for recent block")
+		metrics.TotalFailedRPCCalls.Inc()
+		err := httpError.NewHttpError(
+			"error encountered while querying for recent block",
+			"",
+			http.StatusInternalServerError,
+		)
+		return 0, &err
+	}
+
+	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
+	if err != nil {
+		log.Err(err).Msg("err encountered while querying keyper set index")
+		metrics.TotalFailedRPCCalls.Inc()
+		err := httpError.NewHttpError(
+			"error encountered while querying for keyper set index",
+			"",
+			http.StatusInternalServerError,
+		)
+		return 0, &err
+	}
+
+	return eon, nil
+}
+
 func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
 	identityBytes, err := hex.DecodeString(strings.TrimPrefix(string(identity), "0x"))
 	if err != nil {
@@ -297,28 +329,9 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 		identityPrefix = block
 	}
 
-	blockNumber, err := uc.ethClient.BlockNumber(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for recent block",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for keyper set index",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
+	eon, httpErr := uc.resolveEon(ctx)
+	if httpErr != nil {
+		return nil, httpErr
 	}
 
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
@@ -438,28 +451,9 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		identityPrefix = block
 	}
 
-	blockNumber, err := uc.ethClient.BlockNumber(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for recent block",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for keyper set index",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
+	eon, httpErr := uc.resolveEon(ctx)
+	if httpErr != nil {
+		return nil, httpErr
 	}
 
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)

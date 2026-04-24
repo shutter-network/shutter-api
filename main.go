@@ -131,6 +131,16 @@ func main() {
 	}
 
 	keyperHTTPUrl := os.Getenv("KEYPER_HTTP_URL")
+	configuredEonStr := strings.TrimSpace(os.Getenv("SHUTTER_EON_OVERRIDE"))
+	var configuredEon *uint64
+	if configuredEonStr != "" {
+		eon, parseErr := strconv.ParseUint(configuredEonStr, 10, 64)
+		if parseErr != nil {
+			log.Err(parseErr).Msg("failed to parse SHUTTER_EON_OVERRIDE env")
+			return
+		}
+		configuredEon = &eon
+	}
 
 	signingKey, err := crypto.HexToECDSA(os.Getenv("SIGNING_KEY"))
 	if err != nil {
@@ -186,6 +196,10 @@ func main() {
 	if err != nil {
 		log.Err(err).Msg("unable to parse keyper http url")
 		return
+	}
+	config.ConfiguredEon = configuredEon
+	if configuredEon != nil {
+		log.Info().Uint64("eon", *configuredEon).Msg("using configured shutter eon override")
 	}
 	// Disable event API if event registry contract address is invalid or empty or zero address
 	config.DisableEventAPI =

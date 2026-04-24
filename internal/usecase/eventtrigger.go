@@ -206,7 +206,7 @@ func logPredicates(args []EventArgument, evtSig string) ([]shs.LogPredicate, err
 					}
 					lp.ValuePredicate.Op = shs.BytesEq
 					lp.ValuePredicate.ByteArgs = [][]byte{Align(val)}
-					length = uint64((len(val) / shs.Word)+1)
+					length = uint64((len(val) / shs.Word) + 1)
 				} else {
 					switch strings.ToLower(arg.Operator) {
 					case "lt":
@@ -280,28 +280,9 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		identityPrefix = block
 	}
 
-	blockNumber, err := uc.ethClient.BlockNumber(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for recent block",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying for keyper set index",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
+	eon, httpErr := uc.resolveEon(ctx)
+	if httpErr != nil {
+		return nil, httpErr
 	}
 
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
@@ -552,31 +533,11 @@ func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity str
 	}
 
 	if eon < 0 {
-		blockNumber, err := uc.ethClient.BlockNumber(ctx)
-		if err != nil {
-			log.Err(err).Msg("err encountered while querying for recent block")
-			metrics.TotalFailedRPCCalls.Inc()
-			err := httpError.NewHttpError(
-				"error encountered while querying for recent block",
-				"",
-				http.StatusInternalServerError,
-			)
-			return nil, &err
-		}
-
-		eonUint, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
-		if err != nil {
-			log.Err(err).Msg("err encountered while querying current eon")
-			metrics.TotalFailedRPCCalls.Inc()
-			err := httpError.NewHttpError(
-				"error encountered while querying current eon",
-				"",
-				http.StatusInternalServerError,
-			)
-			return nil, &err
+		eonUint, httpErr := uc.resolveEon(ctx)
+		if httpErr != nil {
+			return nil, httpErr
 		}
 		eon = int64(eonUint)
-
 	}
 	arg := data.GetDecryptionKeyParams{
 		EpochID: []byte(identityBytes),

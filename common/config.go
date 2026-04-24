@@ -13,6 +13,7 @@ type Config struct {
 	SigningKey      *ecdsa.PrivateKey
 	PublicKey       *ecdsa.PublicKey
 	P2P             *p2p.Config
+	ConfiguredEon   *uint64
 	DisableEventAPI bool // true when SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS is not configured; if true, event API endpoints are not registered
 }
 

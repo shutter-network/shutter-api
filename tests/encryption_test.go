@@ -112,6 +112,37 @@ func (s *TestShutterService) TestGetDataForEncryption() {
 	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(epochID.Marshal())), data.EpochID)
 }
 
+func (s *TestShutterService) TestGetDataForEncryptionUsesConfiguredEonOverride() {
+	ctx := context.Background()
+	_, _, sender, err := generateRandomETHAccount()
+	s.Require().NoError(err)
+	identityPrefix, err := generateRandomBytes(32)
+	s.Require().NoError(err)
+	identityPrefixStringified := hex.EncodeToString(identityPrefix)
+	identity := common.ComputeIdentity(identityPrefix, ethCommon.HexToAddress(sender))
+	eon := rand.Uint64()
+	s.config.ConfiguredEon = &eon
+	s.T().Cleanup(func() {
+		s.config.ConfiguredEon = nil
+	})
+
+	eonPublicKey, _, epochID := s.makeKeys(identity)
+
+	s.keyBroadcastContract.
+		On("GetEonKey", nil, eon).
+		Return(eonPublicKey.Marshal(), nil).
+		Once()
+
+	data, err := s.cryptoUsecase.GetDataForEncryption(ctx, sender, identityPrefixStringified, "")
+	s.Require().Nil(err)
+
+	s.Require().Equal(data.Eon, eon)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), data.Identity)
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identityPrefix)), data.IdentityPrefix)
+	s.Require().Equal(data.EonKey, common.PrefixWith0x(hex.EncodeToString(eonPublicKey.Marshal())))
+	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(epochID.Marshal())), data.EpochID)
+}
+
 func (s *TestShutterService) TestGetDataForEncryptionInvalidSender() {
 	ctx := context.Background()
 	sender := "0xWrongAddy"

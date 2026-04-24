@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -625,7 +626,11 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 }
 
 func (uc *CryptoUsecase) getDecryptionKeyFromExternalKeyper(ctx context.Context, eon int64, identity string) (string, error) {
+
 	path := uc.config.KeyperHTTPURL.JoinPath("/decryptionKey/", fmt.Sprint(eon), "/", identity)
+	return QueryExternalKeyper(ctx, eon, identity, path)
+}
+func QueryExternalKeyper(ctx context.Context, eon int64, identity string, path *url.URL) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", path.String(), http.NoBody)
 	if err != nil {
@@ -649,7 +654,7 @@ func (uc *CryptoUsecase) getDecryptionKeyFromExternalKeyper(ctx context.Context,
 		return "", errors.Wrapf(err, "failed to read keypers response body")
 	}
 
-	decryptionKey := string(body)
+	decryptionKey := strings.Trim(string(body), "\n\" ")
 
 	return decryptionKey, nil
 }

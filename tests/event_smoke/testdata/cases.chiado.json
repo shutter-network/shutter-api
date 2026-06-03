@@ -12,6 +12,19 @@
     "expected": "pass"
   },
   {
+    "name": "transfer_like_multi",
+    "description": "TransferLike multi-registration: 10 identities for the same event trigger, all should receive distinct decryption keys",
+    "eventSig": "event TransferLike(address indexed from, address indexed to, uint256 value)",
+    "args": [
+      { "name": "to", "op": "eq", "bytes": "${DEST_ADDR}" },
+      { "name": "value", "op": "gte", "number": "${TRANSFER_VALUE}" }
+    ],
+    "emitSig": "emitTransferLike(address,address,uint256)",
+    "emitArgs": ["${FROM_ADDR}", "${DEST_ADDR}", "${TRANSFER_VALUE}"],
+    "multiReg": 100,
+    "expected": "pass"
+  },
+  {
     "name": "static_args",
     "description": "StaticArgs baseline amount >= 42",
     "eventSig": "event StaticArgs(address user, bool ok, bytes4 sig, bytes32 tag, uint256 amount)",

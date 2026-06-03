@@ -142,6 +142,7 @@ func runMultiReg(cfg *Config, tc TestCase, triggerDef string) Result {
 	type regEntry struct {
 		identity string
 		eon      int64
+		txHash   string
 	}
 	regs := make([]regEntry, 0, n)
 
@@ -152,19 +153,37 @@ func runMultiReg(cfg *Config, tc TestCase, triggerDef string) Result {
 			return Result{tc.Name, "FAIL", fmt.Sprintf("register %d: %s", i+1, err.Error())}
 		}
 		logf(cfg, "[%s] reg[%d] identity=%s eon=%d prefix=%s", tc.Name, i+1, identity, eon, prefix)
+		regs = append(regs, regEntry{identity, eon, regTx})
+	}
 
-		if cfg.WaitRegReceipt {
-			fmt.Printf("[%s] wait registration receipt %d/%d\n", tc.Name, i+1, n)
-			regBlock, err := waitReceiptBlock(cfg, regTx)
-			if err != nil {
-				return Result{tc.Name, "FAIL", fmt.Sprintf("registration receipt %d: %s", i+1, err.Error())}
-			}
-			_ = waitBlockGreater(cfg, regBlock)
-		} else {
-			fmt.Printf("[%s] reg[%d] tx=%s (sleep %s)\n", tc.Name, i+1, regTx, cfg.RegistrationDelay)
-			time.Sleep(cfg.RegistrationDelay)
+	if cfg.WaitRegReceipt {
+		fmt.Printf("[%s] waiting for %d registration receipts (parallel)\n", tc.Name, n)
+		type receiptResult struct {
+			block int64
+			err   error
 		}
-		regs = append(regs, regEntry{identity, eon})
+		ch := make(chan receiptResult, n)
+		for _, reg := range regs {
+			reg := reg
+			go func() {
+				block, err := waitReceiptBlock(cfg, reg.txHash)
+				ch <- receiptResult{block, err}
+			}()
+		}
+		maxBlock := int64(0)
+		for range regs {
+			r := <-ch
+			if r.err != nil {
+				return Result{tc.Name, "FAIL", "registration receipt: " + r.err.Error()}
+			}
+			if r.block > maxBlock {
+				maxBlock = r.block
+			}
+		}
+		_ = waitBlockGreater(cfg, maxBlock)
+	} else {
+		fmt.Printf("[%s] all %d registration txs sent (sleep %s)\n", tc.Name, n, cfg.RegistrationDelay)
+		time.Sleep(cfg.RegistrationDelay)
 	}
 
 	fmt.Printf("[%s] emit\n", tc.Name)

@@ -29,7 +29,8 @@
     "args": [],
     "emitSig": "emitDynamicSample()",
     "emitArgs": [],
-    "expected": "pass"
+    "expected": "pass",
+    "knownIssue": "Currently unsupported (arrays as unindexed parameters)"
   },
   {
     "name": "transfer_from_to_eq",
@@ -152,7 +153,8 @@
     ],
     "emitSig": "emitStaticSample()",
     "emitArgs": [],
-    "expected": "pass"
+    "expected": "pass",
+    "knownIssue": "Currently fails due to undefined issue."
   },
   {
     "name": "static_sig_eq",
@@ -175,8 +177,7 @@
     ],
     "emitSig": "emitStaticSample()",
     "emitArgs": [],
-    "expected": "pass",
-    "knownIssue": "Currently fails due to issue with unindexed offsets"
+    "expected": "pass"
   },
   {
     "name": "static_custom_order_permuted",

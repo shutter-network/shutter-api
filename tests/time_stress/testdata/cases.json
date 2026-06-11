@@ -1,0 +1,8 @@
+[
+  {
+    "name": "stress_100",
+    "description": "100 time-based identities registered in parallel for the same decryption timestamp",
+    "count": 100,
+    "expected": "pass"
+  }
+]

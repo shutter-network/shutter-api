@@ -65,7 +65,7 @@ This documentation will guide you through:
   - **Gnosis Address**: `0x694e5de9345d39C148DA90e6939A3fd2142267D9`
 
 - **Address of the API**:
-  - **Chiado Address**: `0xb9C303443c9af84777e60D5C987AbF0c43844918`
+  - **Chiado Address**: `0xd150bbf86C686de1a25820A94c2C2397e0bC54ab`
   - **Gnosis Address**: `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`
 
 ### Rate limits / Authorization
@@ -261,14 +261,14 @@ curl -X GET "https://<API_BASE_URL>/event/get_trigger_expiration_block?eon=1&ide
 
 To encrypt commitments, obtain the encryption data associated with your identity. There are two endpoints:
 
-- **Time-based**: `/time/get_data_for_encryption` — parameters `address` (required) and `identityPrefix` (optional). Use the address that will register the identity (your account if self-registering, or the API address: Gnosis `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`, Chiado `0xb9C303443c9af84777e60D5C987AbF0c43844918`).
+- **Time-based**: `/time/get_data_for_encryption` — parameters `address` (required) and `identityPrefix` (optional). Use the address that will register the identity (your account if self-registering, or the API address: Gnosis `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`, Chiado `0xd150bbf86C686de1a25820A94c2C2397e0bC54ab`).
 - **Event-based**: `/event/get_data_for_encryption` — parameters `triggerDefinition` (required) and `identityPrefix` (optional).
 
 Refer to the Swagger documentation for specifics on these endpoints.
 
 #### Example Request (Time-based)
 ```bash
-curl -X GET "https://<API_BASE_URL>/time/get_data_for_encryption?address=0xb9C303443c9af84777e60D5C987AbF0c43844918&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
+curl -X GET "https://<API_BASE_URL>/time/get_data_for_encryption?address=0xd150bbf86C686de1a25820A94c2C2397e0bC54ab&identityPrefix=0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0"
 ```
 
 #### Example Request (Event-based)

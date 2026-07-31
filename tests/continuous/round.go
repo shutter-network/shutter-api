@@ -66,7 +66,10 @@ func (r Result) String() string {
 	if r.TxHash != "" {
 		line += " tx=" + r.TxHash
 	}
-	if r.LastPoll != "" {
+	// Failures only. A 404 on the first poll is the normal case — the key does not
+	// exist until the timestamp passes — so on a passing round this reads as a
+	// problem that isn't one.
+	if !r.Pass && r.LastPoll != "" {
 		line += fmt.Sprintf(" last_poll=%q", r.LastPoll)
 	}
 	return line

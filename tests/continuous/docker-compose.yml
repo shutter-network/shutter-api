@@ -48,7 +48,10 @@ services:
       - ./vmagent.yaml:/etc/vmagent/scrape.yaml:ro
     command:
       - "-promscrape.config=/etc/vmagent/scrape.yaml"
-      - "-remoteWrite.url=${REMOTE_WRITE_URL}"
+      # Defaulted to empty so compose doesn't warn about an unset variable on every
+      # command while the pushmetrics profile is inactive. vmagent itself fails loudly
+      # if the profile is enabled and this is still blank.
+      - "-remoteWrite.url=${REMOTE_WRITE_URL:-}"
     depends_on:
       - continuous
     logging:

@@ -29,38 +29,47 @@ const (
 
 // Result is the outcome of one round.
 type Result struct {
-	Round    int
-	Pass     bool
-	Stage    string        // set only on failure
-	Err      error         // set only on failure
-	Latency  time.Duration // key availability minus the decryption timestamp
-	Eon      uint64
-	Identity string
-	TxHash   string
-	LastPoll string // the API's last non-200 description, useful when a round fails
+	Round     int
+	Pass      bool
+	Stage     string        // set only on failure
+	Err       error         // set only on failure
+	Latency   time.Duration // key availability minus the decryption timestamp
+	Eon       uint64
+	Identity  string
+	TxHash    string
+	Timestamp int64  // the decryption timestamp this round registered
+	LastPoll  string // the API's last non-200 description, useful when a round fails
 }
 
-// String renders one log line. Kept terse so a 26-hour run stays greppable.
+// String renders one log line.
+//
+// Identities and transaction hashes are logged in full, not elided. The reason to
+// keep these logs at all is being able to take a round from six hours ago and look
+// it up in the registry or on the explorer, and a truncated hash cannot be pasted
+// into either. At one round a minute a day of this is about 200KB.
 func (r Result) String() string {
+	line := fmt.Sprintf("round=%d", r.Round)
 	if r.Pass {
-		return fmt.Sprintf("round=%d PASS latency=%s eon=%d identity=%s",
-			r.Round, r.Latency.Round(time.Millisecond), r.Eon, short(r.Identity))
+		line += fmt.Sprintf(" PASS latency=%s", r.Latency.Round(time.Millisecond))
+	} else {
+		line += fmt.Sprintf(" FAIL stage=%s err=%v", r.Stage, r.Err)
 	}
-	line := fmt.Sprintf("round=%d FAIL stage=%s err=%v", r.Round, r.Stage, r.Err)
+	if r.Eon != 0 {
+		line += fmt.Sprintf(" eon=%d", r.Eon)
+	}
+	if r.Timestamp != 0 {
+		line += fmt.Sprintf(" ts=%d", r.Timestamp)
+	}
+	if r.Identity != "" {
+		line += " identity=" + r.Identity
+	}
 	if r.TxHash != "" {
-		line += " tx=" + short(r.TxHash)
+		line += " tx=" + r.TxHash
 	}
 	if r.LastPoll != "" {
 		line += fmt.Sprintf(" last_poll=%q", r.LastPoll)
 	}
 	return line
-}
-
-func short(hexStr string) string {
-	if len(hexStr) <= 12 {
-		return hexStr
-	}
-	return hexStr[:10] + "…"
 }
 
 // RunRound performs one full round: derive an identity, encrypt to it, register
@@ -102,6 +111,7 @@ func RunRound(ctx context.Context, c *client, cfg Config, round int) Result {
 
 	// 3. Register, with the decryption timestamp Lead ahead of now.
 	timestamp := time.Now().Add(cfg.Lead).Unix()
+	res.Timestamp = timestamp
 	reg, err := c.registerIdentity(ctx, timestamp, prefix)
 	if err != nil {
 		res.Stage, res.Err = StageRegister, err

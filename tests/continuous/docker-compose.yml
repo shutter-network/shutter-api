@@ -1,0 +1,61 @@
+# Self-contained deployment for the continuous round monitor.
+#
+#   cd tests/continuous
+#   cp .env.example .env      # then fill in the three required values
+#   docker compose up -d
+#   docker compose logs -f
+#
+# Depends on nothing else — no database, no metrics stack, no shared network. The
+# build context is the repository root because the Dockerfile needs the Go module.
+name: shutter-api-continuous
+
+services:
+  continuous:
+    build:
+      context: ../..
+      dockerfile: tests/continuous/Dockerfile
+    # No restart, deliberately. Staying alive is the loop's job, not docker's: a failed
+    # round is recorded in-process and the run continues, so an unbounded run keeps
+    # going without help. That means the container only exits when the run has finished
+    # or the verdict is fail — and restarting either one is wrong. It would re-run a
+    # completed soak, or hammer an API that is already failing with registrations that
+    # each cost gas.
+    #
+    # The cost is that a standing monitor won't come back after a host reboot. Start it
+    # again by hand; the last_success_timestamp alert is what tells you it is gone.
+    restart: "no"
+    env_file: .env
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # Metrics are opt-in. Until you enable this, set METRICS_PORT=0 in .env and read the
+  # log — the monitor is fully useful without it.
+  #
+  # Enable with:  docker compose --profile pushmetrics up -d
+  #
+  # Uses the same image and remote-write target as the keyper deployments, so the
+  # instance / network / deployment labels are applied the same way. Copy the vmagent
+  # service and its config from shutter-keyper-deployment and point the scrape config
+  # at continuous:${METRICS_PORT}.
+  vmagent:
+    profiles: [pushmetrics]
+    image: victoriametrics/vmagent:latest
+    restart: unless-stopped
+    volumes:
+      - ./vmagent.yaml:/etc/vmagent/scrape.yaml:ro
+    command:
+      - "-promscrape.config=/etc/vmagent/scrape.yaml"
+      # Defaulted to empty so compose doesn't warn about an unset variable on every
+      # command while the pushmetrics profile is inactive. vmagent itself fails loudly
+      # if the profile is enabled and this is still blank.
+      - "-remoteWrite.url=${REMOTE_WRITE_URL:-}"
+    depends_on:
+      - continuous
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

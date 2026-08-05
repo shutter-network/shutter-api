@@ -19,9 +19,13 @@ Caddy only reads the snippet at startup, so a change needs caddy restarted.
 ## Tiers
 
 Every key sits on a tier, which decides its rate limits. `limits.yaml` defines
-them — currently `standard` (what every key gets) and `premium` (raised limits for
-customers running continuously). A row with no tier column reads as `standard`, so
-a `keys.csv` written before tiers existed still works.
+them — currently `standard` and `premium`, the latter for customers running
+continuously.
+
+A row with no tier column reads as `standard`, so a `keys.csv` written before tiers
+existed still works untouched — and a deploy stays reversible, since the previous
+version cannot read a three-column file. Add the column when you first promote
+someone, not before.
 
 Limits are `base × multiplier`: each endpoint has one base number, each tier one
 multiplier. The compiler prints the resolved table, so read that rather than doing
@@ -62,3 +66,43 @@ changed what you meant to.
 ## Revoke a key
 
 Delete its row from `keys.csv` and redeploy.
+
+## Tests
+
+```bash
+pytest apikeys/ -v
+```
+
+Needs `pytest` and `pyyaml`.
+
+Nothing runs these automatically yet, so run them after changing `apikeys.py`.
+
+`testdata/` holds a saved copy of the snippet the compiler should produce, and the
+test compares its output against that copy. So if you change how the snippet is
+built, that test fails and the diff shows you exactly what changed in the config
+caddy receives. Read the diff. If the change was intended, re-save the copy:
+
+```bash
+UPDATE_GOLDEN=1 pytest apikeys/ -k compile
+```
+
+## Verifying a tier change against a deployment
+
+`test_apikeys.py` covers the generator. To check that a deployment really enforces
+different limits per tier, compile from a temporary policy with tiny numbers instead
+of making thousands of requests, and never edit `limits.yaml` to do it:
+
+```bash
+# a copy of limits.yaml with window: 1m and base: 1 on every endpoint
+docker compose <overrides> run --rm \
+  -v /tmp/limits.test.yaml:/limits.test.yaml -e LIMITS_FILE=/limits.test.yaml compiler
+# restart caddy, then burst a key of each tier and note where the 429 lands
+```
+
+With multipliers of 1 / 3 / 6, anonymous should 429 on request 2, a standard key on 4
+and a premium key on 7. Restoring is a normal compile, since the real `limits.yaml` was
+never touched.
+
+Burst a read endpoint — `get_data_for_encryption` or `get_decryption_key` — so no
+transaction is submitted and no gas is spent. Caddy counts the request before proxying,
+so it is counted even when the API answers with an error.

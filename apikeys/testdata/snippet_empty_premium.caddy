@@ -1,0 +1,86 @@
+@noApiKey {
+	#api key for alice
+	not header Authorization "Bearer aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+@withApiKey {
+	#api key for alice
+	header Authorization "Bearer aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+@standardApiKey {
+	#api key for alice
+	header Authorization "Bearer aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+@premiumApiKey {
+	#no keys in this tier
+	header Authorization "Bearer no-keys-in-this-tier"
+}
+
+rate_limit @noApiKey {
+	log_key
+	zone register_identity__unauthorized {
+		match {
+			path */time/register_identity*
+			method POST
+		}
+		key {remote_host}
+		window 1d
+		events 5
+	}
+	zone get_decryption_key__unauthorized {
+		match {
+			path */time/get_decryption_key*
+			method GET
+		}
+		key {remote_host}
+		window 1d
+		events 20
+	}
+}
+
+rate_limit @standardApiKey {
+	log_key
+	zone register_identity__standard {
+		match {
+			path */time/register_identity*
+			method POST
+		}
+		key {header.Authorization}
+		window 1d
+		events 500
+	}
+	zone get_decryption_key__standard {
+		match {
+			path */time/get_decryption_key*
+			method GET
+		}
+		key {header.Authorization}
+		window 1d
+		events 2000
+	}
+}
+
+rate_limit @premiumApiKey {
+	log_key
+	zone register_identity__premium {
+		match {
+			path */time/register_identity*
+			method POST
+		}
+		key {header.Authorization}
+		window 1d
+		events 2500
+	}
+	zone get_decryption_key__premium {
+		match {
+			path */time/get_decryption_key*
+			method GET
+		}
+		key {header.Authorization}
+		window 1d
+		events 10000
+	}
+}
+

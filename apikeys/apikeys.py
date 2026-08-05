@@ -21,15 +21,15 @@ Tiers
 -----
 Each key sits on a tier, which decides its rate limits. The tiers and their limits are
 defined in ${LIMITS_FILE} (see limits.yaml); the key database records which tier each
-key is on, as a third column:
+key is on, in a third column:
 
     username,apikey,tier
     alice@example.com,<64 hex chars>,standard
     bob@example.com,<64 hex chars>,premium
 
 Rows with no tier column read as standard, so a database written before tiers existed
-still works. To move an existing key between tiers, edit that column and re-run with
---compile.
+still works and a deploy stays reversible. To move a key between tiers, edit that
+column and re-run with --compile.
 
 The compiled snippet contains both the API key matchers and the rate limit zones —
 limits are not configured as caddy labels in docker-compose, so the whole policy lives
@@ -39,7 +39,7 @@ in one readable file. Every compile prints the limits it produced.
 import os
 import sys
 import secrets
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Optional
 
 import yaml
 
@@ -52,12 +52,20 @@ LIMITS_FILE = os.environ.get("LIMITS_FILE", "limits.yaml")
 # built by inverting every known key, and it is counted per IP rather than per key.
 UNAUTHENTICATED_TIER = "unauthorized"
 
+# Every key is on this tier unless keys.csv says otherwise, including rows written
+# before the tier column existed.
+DEFAULT_TIER = "standard"
+
 # Sole condition of a tier matcher with no keys in it. A named matcher with no
 # conditions matches every request, which would hand that tier's limits to
 # unauthenticated traffic — so an empty tier gets a condition nothing satisfies.
 NEVER_MATCHES = "no-keys-in-this-tier"
 
 TAB = "\t"
+
+
+class ConfigError(Exception):
+    """Bad input in the key database or the limits file."""
 
 
 class User(NamedTuple):
@@ -67,7 +75,7 @@ class User(NamedTuple):
 
 class Limits(NamedTuple):
     window: str
-    tiers: Dict[str, Dict[str, str]]  # tier -> {matcher, key}
+    tiers: Dict[str, Dict[str, Any]]  # tier -> {matcher, key, multiplier}
     endpoints: List[Dict[str, Any]]
 
     @property
@@ -75,28 +83,37 @@ class Limits(NamedTuple):
         """Tiers a key can be put on — everything except the no-key tier."""
         return [t for t in self.tiers if t != UNAUTHENTICATED_TIER]
 
+    def events(self, endpoint: Dict[str, Any], tier: str) -> int:
+        return endpoint["base"] * self.tiers[tier]["multiplier"]
+
 
 def generate_token() -> str:
     return secrets.token_hex(32)
 
 
-def read_limits() -> Limits:
+def read_limits(path: Optional[str] = None) -> Limits:
+    path = path or LIMITS_FILE
     try:
-        with open(LIMITS_FILE) as f:
+        with open(path) as f:
             raw = yaml.safe_load(f)
     except FileNotFoundError:
-        sys.exit(f"Limits file '{LIMITS_FILE}' not found")
+        raise ConfigError(f"Limits file '{path}' not found")
+    except yaml.YAMLError as e:
+        raise ConfigError(f"'{path}' is not valid YAML: {e}")
+
+    if not isinstance(raw, dict):
+        raise ConfigError(f"'{path}' must be a mapping with window, tiers and endpoints")
 
     for field in ("window", "tiers", "endpoints"):
         if not raw.get(field):
-            sys.exit(f"'{LIMITS_FILE}' is missing '{field}'")
+            raise ConfigError(f"'{path}' is missing '{field}'")
 
     for tier, cfg in raw["tiers"].items():
         for field in ("matcher", "key", "multiplier"):
             if cfg.get(field) is None:
-                sys.exit(f"Tier '{tier}' in '{LIMITS_FILE}' is missing '{field}'")
+                raise ConfigError(f"Tier '{tier}' in '{path}' is missing '{field}'")
         if not isinstance(cfg["multiplier"], int) or cfg["multiplier"] < 1:
-            sys.exit(
+            raise ConfigError(
                 f"Tier '{tier}' has multiplier {cfg['multiplier']!r}; must be a "
                 f"positive integer"
             )
@@ -104,64 +121,70 @@ def read_limits() -> Limits:
     for endpoint in raw["endpoints"]:
         for field in ("name", "path", "method", "base"):
             if endpoint.get(field) is None:
-                sys.exit(f"Endpoint entry in '{LIMITS_FILE}' is missing '{field}': {endpoint}")
+                raise ConfigError(
+                    f"Endpoint entry in '{path}' is missing '{field}': {endpoint}"
+                )
         if not isinstance(endpoint["base"], int) or endpoint["base"] < 1:
-            sys.exit(
+            raise ConfigError(
                 f"Endpoint '{endpoint['name']}' has base {endpoint['base']!r}; must "
                 f"be a positive integer"
             )
 
-    return Limits(str(raw["window"]), raw["tiers"], raw["endpoints"])
+    limits = Limits(str(raw["window"]), raw["tiers"], raw["endpoints"])
+    if DEFAULT_TIER not in limits.assignable_tiers:
+        raise ConfigError(f"'{path}' must define a '{DEFAULT_TIER}' tier")
+    return limits
 
 
-def read_users(limits: Limits) -> Dict[str, User]:
+def read_users(limits: Limits, path: Optional[str] = None) -> Dict[str, User]:
     """Read the key database. Rows are `username,apikey[,tier]`.
 
-    The tier column is optional: a two-column row (the format before tiers
-    existed) reads as standard, so an untouched keys.csv keeps working.
+    The tier column is optional; a two-column row reads as standard.
     """
-    default_tier = "standard"
-    if default_tier not in limits.assignable_tiers:
-        sys.exit(f"'{LIMITS_FILE}' must define a '{default_tier}' tier")
-
+    path = path or KEYS_FILE
     try:
-        with open(KEYS_FILE) as f:
+        with open(path) as f:
             rows = [line.strip().split(",") for line in f if line.strip()]
     except FileNotFoundError:
         return {}
 
     users: Dict[str, User] = {}
     for row in rows:
+        if row[0].strip() == "username":  # header row, whatever its column count
+            continue
         if len(row) == 2:
-            name, key, tier = row[0], row[1], default_tier
+            name, key, tier = row[0], row[1], DEFAULT_TIER
         elif len(row) == 3:
             name, key, tier = row
         else:
-            sys.exit(f"Malformed row in '{KEYS_FILE}': {','.join(row)}")
-
-        name, key, tier = name.strip(), key.strip(), tier.strip() or default_tier
-        if name == "username":  # header row
-            continue
+            raise ConfigError(
+                f"Malformed row in '{path}': expected username,apikey[,tier] — got "
+                f"{len(row)} fields for '{row[0].strip()}'"
+            )
+        name, key, tier = name.strip(), key.strip(), tier.strip() or DEFAULT_TIER
         if tier not in limits.assignable_tiers:
-            sys.exit(
-                f"Unknown tier '{tier}' for '{name}'. '{LIMITS_FILE}' defines: "
+            raise ConfigError(
+                f"Unknown tier '{tier}' for '{name}'. Defined tiers: "
                 f"{', '.join(limits.assignable_tiers)}"
             )
         users[name] = User(key, tier)
 
-    malformed = [u.key for u in users.values() if len(u.key) < 64]
+    # Name the users, not their keys — an error message is somewhere key material
+    # should never end up.
+    malformed = [name for name, u in users.items() if len(u.key) < 64]
     if malformed:
-        sys.exit(f"Malformed keys: {malformed}")
+        raise ConfigError(f"Malformed keys for: {', '.join(malformed)}")
     return users
 
 
-def dump_users(users: Dict[str, User]) -> None:
-    with open(KEYS_FILE, "wb") as f:
+def dump_users(users: Dict[str, User], path: Optional[str] = None) -> None:
+    path = path or KEYS_FILE
+    with open(path, "wb") as f:
         f.write(b"username,apikey,tier\n")
         f.writelines(
             [f"{name},{u.key},{u.tier}\n".encode() for name, u in users.items()]
         )
-    print(f"Wrote user database to '{KEYS_FILE}'")
+    print(f"Wrote user database to '{path}'")
 
 
 def write_matcher(f, name: str, users: Dict[str, User], negate: bool = False) -> None:
@@ -186,10 +209,8 @@ def write_rate_limits(f, limits: Limits) -> None:
     """Write one rate_limit block per tier, with one zone per endpoint."""
     for tier, cfg in limits.tiers.items():
         f.write(f"rate_limit {cfg['matcher']} {{\n".encode())
-        # A bare flag. The docker-compose labels this replaced spelled it
-        # `log_key: " "` because caddy-docker-proxy uses a single-space value to
-        # mean "directive with no arguments" — that space is not an argument, and
-        # passing it through is a parse error in real Caddyfile syntax.
+        # A bare flag. `log_key " "` is a caddy-docker-proxy idiom for a directive
+        # with no arguments, and a parse error in Caddyfile syntax.
         f.write(f"{TAB}log_key\n".encode())
         for endpoint in limits.endpoints:
             f.write(f"{TAB}zone {endpoint['name']}__{tier} {{\n".encode())
@@ -199,16 +220,17 @@ def write_rate_limits(f, limits: Limits) -> None:
             f.write(f"{TAB * 2}}}\n".encode())
             f.write(f"{TAB * 2}key {cfg['key']}\n".encode())
             f.write(f"{TAB * 2}window {limits.window}\n".encode())
-            f.write(f"{TAB * 2}events {endpoint['base'] * cfg['multiplier']}\n".encode())
+            f.write(f"{TAB * 2}events {limits.events(endpoint, tier)}\n".encode())
             f.write(f"{TAB}}}\n".encode())
         f.write(b"}\n\n")
 
 
-def compile(users: Dict[str, User], limits: Limits) -> None:
+def compile(users: Dict[str, User], limits: Limits, path: Optional[str] = None) -> None:
+    path = path or CADDY_SNIPPET
     if len(users) == 0:
-        users["THROWAWAY DO NOT USE!!!"] = User(generate_token(), "standard")
+        users["THROWAWAY DO NOT USE!!!"] = User(generate_token(), DEFAULT_TIER)
 
-    with open(CADDY_SNIPPET, "wb") as f:
+    with open(path, "wb") as f:
         # Requests with no valid key: every key negated, so "none of these".
         write_matcher(f, "noApiKey", users, negate=True)
         # Any valid key regardless of tier. Rate limiting matches per tier, but
@@ -220,26 +242,19 @@ def compile(users: Dict[str, User], limits: Limits) -> None:
             )
         write_rate_limits(f, limits)
 
-    print(f"Compiled Caddyfile snippet to '{CADDY_SNIPPET}'")
+    print(f"Compiled Caddyfile snippet to '{path}'")
     print_resolved(users, limits)
 
 
 def print_resolved(users: Dict[str, User], limits: Limits) -> None:
-    """Print the limits this compile actually produced.
-
-    The YAML holds bases and multipliers, so the effective numbers are not
-    visible by reading it. Printing them here keeps them accurate by
-    construction — a comment stating them would go stale the first time someone
-    changes a multiplier.
-    """
+    """Print the resolved limits, which limits.yaml only holds as base × multiplier."""
     tiers = list(limits.tiers)
     width = max(len(e["name"]) for e in limits.endpoints)
-    header = f"  {'endpoint':<{width}}" + "".join(f"{t:>14}" for t in tiers)
-    print(header)
+    print(f"  {'endpoint':<{width}}" + "".join(f"{t:>14}" for t in tiers))
     for endpoint in limits.endpoints:
         row = f"  {endpoint['name']:<{width}}"
         for tier in tiers:
-            row += f"{endpoint['base'] * limits.tiers[tier]['multiplier']:>14}"
+            row += f"{limits.events(endpoint, tier):>14}"
         print(row)
     counts = ", ".join(
         f"{t}={sum(1 for u in users.values() if u.tier == t)}"
@@ -248,12 +263,12 @@ def print_resolved(users: Dict[str, User], limits: Limits) -> None:
     print(f"  per {limits.window}, keys per tier: {counts}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     limits = read_limits()
 
     if len(sys.argv) > 1 and sys.argv[1] == "--compile":
         compile(read_users(limits), limits)
-        sys.exit(0)
+        return
 
     user = input(
         "User reference (e.g. email) for new key. Empty for only compiling Caddyfile snippet: "
@@ -265,9 +280,19 @@ if __name__ == "__main__":
         sys.exit("User name not unique")
     if len(user):
         options = "/".join(limits.assignable_tiers)
-        tier = input(f"Tier for this key ({options}) [standard]: ").strip() or "standard"
+        tier = (
+                input(f"Tier for this key ({options}) [{DEFAULT_TIER}]: ").strip()
+                or DEFAULT_TIER
+        )
         if tier not in limits.assignable_tiers:
             sys.exit(f"Unknown tier '{tier}'. Expected one of: {options}")
         users[user] = User(generate_token(), tier)
         dump_users(users)
     compile(users, limits)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except ConfigError as e:
+        sys.exit(str(e))

@@ -18,21 +18,22 @@ This guide will help you integrate Shutter's Commit and Reveal Scheme into your 
 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
-3. [Endpoints](#endpoints)
-   - [Identity Registration](#1-identity-registration)
-     - [Register an Identity with Time-based Decryption Triggers](#1a-register-an-identity-with-time-based-decryption-triggers)
-     - [Compile an Event Trigger Definition](#1b-compile-an-event-trigger-definition)
-     - [Register an Identity with Event-based Decryption Triggers](#1c-register-an-identity-with-event-based-decryption-triggers)
-     - [Get Event Trigger Identity Registration Expiration Block](#1d-get-event-trigger-identity-registration-expiration-block)
-   - [Encryption Operations](#2-encryption-operations)
-     - [Retrieve the Encryption Data](#2a-retrieve-the-encryption-data)
-   - [Decryption Operations](#3-decryption-operations)
-     - [Retrieve the Decryption Key](#3a-retrieve-the-decryption-key)
-     - [Decrypt Commitments](#3b-decrypt-commitments)
-4. [Future features](#future-features)
-5. [FAQs](#faqs)
-6. [Swagger Documentation](#swagger-documentation)
-7. [Support](#support)
+3. [Rate limits / Authorization](#rate-limits--authorization)
+4. [Endpoints](#endpoints)
+  - [Identity Registration](#1-identity-registration)
+    - [Register an Identity with Time-based Decryption Triggers](#1a-register-an-identity-with-time-based-decryption-triggers)
+    - [Compile an Event Trigger Definition](#1b-compile-an-event-trigger-definition)
+    - [Register an Identity with Event-based Decryption Triggers](#1c-register-an-identity-with-event-based-decryption-triggers)
+    - [Get Event Trigger Identity Registration Expiration Block](#1d-get-event-trigger-identity-registration-expiration-block)
+  - [Encryption Operations](#2-encryption-operations)
+    - [Retrieve the Encryption Data](#2a-retrieve-the-encryption-data)
+  - [Decryption Operations](#3-decryption-operations)
+    - [Retrieve the Decryption Key](#3a-retrieve-the-decryption-key)
+    - [Decrypt Commitments](#3b-decrypt-commitments)
+5. [Future features](#future-features)
+6. [FAQs](#faqs)
+7. [Swagger Documentation](#swagger-documentation)
+8. [Support](#support)
 
 ---
 
@@ -68,36 +69,49 @@ This documentation will guide you through:
   - **Chiado Address**: `0xd150bbf86C686de1a25820A94c2C2397e0bC54ab`
   - **Gnosis Address**: `0x228DefCF37Da29475F0EE2B9E4dfAeDc3b0746bc`
 
-### Rate limits / Authorization
+## Rate limits / Authorization
 
-For unauthorized access, the API on Gnosis Mainnet is rate limited with these limits per endpoint and remote ip.
-**Please note that we are currently in the process of deploying event-based triggers to Gnosis Mainnet and that they are not fully operational yet.**
+These limits apply on Gnosis Mainnet. Chiado is unlimited, which makes it the better choice for development.
 
-  - `/time/register_identity` 5 requests per 24 hours
-  - `/time/get_data_for_encryption` 10 requests per 24 hours
-  - `/time/get_decryption_key` 20 requests per 24 hours
-  - `/event/compile_trigger_definition` 20 requests per 24 hours
-  - `/event/register_identity` 5 requests per 24 hours
-  - `/event/get_data_for_encryption` 10 requests per 24 hours
-  - `/event/get_trigger_expiration_block` 20 requests per 24 hours
-  - `/event/get_decryption_key` 20 requests per 24 hours
-  - `/decrypt_commitment` 10 requests per 24 hours
+On Mainnet, requests without an API key are rate limited per endpoint and remote IP:
 
-We recommend using Chiado for development, because there are no rate limits in place.
+- `/time/register_identity` 5 requests per 24 hours
+- `/time/get_data_for_encryption` 10 requests per 24 hours
+- `/time/get_decryption_key` 20 requests per 24 hours
+- `/event/compile_trigger_definition` 20 requests per 24 hours
+- `/event/register_identity` 5 requests per 24 hours
+- `/event/get_data_for_encryption` 10 requests per 24 hours
+- `/event/get_trigger_expiration_block` 20 requests per 24 hours
+- `/event/get_decryption_key` 20 requests per 24 hours
+- `/decrypt_commitment` 10 requests per 24 hours
 
-If you need higher limits, contact [loring@brainbot.com](mailto:loring@brainbot.com) to request an API key.
+API keys come on one of two tiers. Contact [loring@brainbot.com](mailto:loring@brainbot.com) if you are interested in either.
 
-Authorized requests have these limits:
+**Standard** limits:
 
-  - `/time/register_identity` 500 requests per 24 hours
-  - `/time/get_data_for_encryption` 1000 requests per 24 hours
-  - `/time/get_decryption_key` 2000 requests per 24 hours
-  - `/event/compile_trigger_definition` 2000 requests per 24 hours
-  - `/event/register_identity` 500 requests per 24 hours
-  - `/event/get_data_for_encryption` 1000 requests per 24 hours
-  - `/event/get_trigger_expiration_block` 2000 requests per 24 hours
-  - `/event/get_decryption_key` 2000 requests per 24 hours
-  - `/decrypt_commitment` 1000 requests per 24 hours
+- `/time/register_identity` 500 requests per 24 hours
+- `/time/get_data_for_encryption` 1000 requests per 24 hours
+- `/time/get_decryption_key` 2000 requests per 24 hours
+- `/event/compile_trigger_definition` 2000 requests per 24 hours
+- `/event/register_identity` 500 requests per 24 hours
+- `/event/get_data_for_encryption` 1000 requests per 24 hours
+- `/event/get_trigger_expiration_block` 2000 requests per 24 hours
+- `/event/get_decryption_key` 2000 requests per 24 hours
+- `/decrypt_commitment` 1000 requests per 24 hours
+
+**Premium** limits, for applications running continuously rather than experimenting — roughly one registration per minute, sustained:
+
+- `/time/register_identity` 2500 requests per 24 hours
+- `/time/get_data_for_encryption` 5000 requests per 24 hours
+- `/time/get_decryption_key` 10000 requests per 24 hours
+- `/event/compile_trigger_definition` 10000 requests per 24 hours
+- `/event/register_identity` 2500 requests per 24 hours
+- `/event/get_data_for_encryption` 5000 requests per 24 hours
+- `/event/get_trigger_expiration_block` 10000 requests per 24 hours
+- `/event/get_decryption_key` 10000 requests per 24 hours
+- `/decrypt_commitment` 5000 requests per 24 hours
+
+Limits are counted per API key, over a rolling 24-hour window.
 
 Authorization is done by using an `Authorization: Bearer $API_KEY` header, when calling the API.
 
@@ -186,12 +200,12 @@ curl -X POST https://<API_BASE_URL>/event/compile_trigger_definition \
 > **Notes:**
 > - Arrays and structs are currently not supported in the arguments.
 > - The object format for the "arguments" list is:
->   - `name`: The matching argument name from the event signature
+    >   - `name`: The matching argument name from the event signature
 >   - `op`: One of `lt`, `lte`, `eq`, `gte`, `gt` for comparison operations
 >   - `number`: Integer argument for numeric comparisons
 >   - `bytes`: Hex-encoded byte argument for non-numeric matches with `op == "eq"`
 > - Indexed params (topics) are eq‑only. For indexed static types (address, uint256, bytes32), pass the hex representation.
-> 
+>
 > The resulting condition for the trigger is a logical AND of all arguments given.
 
 ### 1.C Register an Identity with Event-based Decryption Triggers
@@ -279,11 +293,11 @@ curl -X GET "https://<API_BASE_URL>/event/get_data_for_encryption?identityPrefix
 #### Example Response
 ```json
 {
-"eon": 1,
-"eon_key": "0x57af5437a84ef50e5ed75772c18ae38b168bb07c50cadb65fc6136604e662255",
-"identity": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75",
-"identity_prefix": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0",
-"epoch_id": "0x88f2495d1240f9c5523db589996a50a4984ee7a08a8a8f4b269e4345b383310abd2dc1cd9c9c2b8718ed3f486d5242f5"
+  "eon": 1,
+  "eon_key": "0x57af5437a84ef50e5ed75772c18ae38b168bb07c50cadb65fc6136604e662255",
+  "identity": "0x8c232eae4f957259e9d6b68301d529e9851b8642874c8f59d2bd0fb84a570c75",
+  "identity_prefix": "0x79bc8f6b4fcb02c651d6a702b7ad965c7fca19e94a9646d21ae90c8b54c030a0",
+  "epoch_id": "0x88f2495d1240f9c5523db589996a50a4984ee7a08a8a8f4b269e4345b383310abd2dc1cd9c9c2b8718ed3f486d5242f5"
 }
 ```
 

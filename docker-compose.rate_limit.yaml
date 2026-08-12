@@ -6,6 +6,12 @@
 #   docker compose -f docker-compose.yml -f docker-compose.rate_limit.yaml up -d
 #   ```
 #
+# Use together with redirects if the deployment needs them — leaving the redirect
+# override out silently drops the old-endpoint redirects:
+#   ```
+#   docker compose -f docker-compose.yml -f docker-compose.redirect.yaml -f docker-compose.rate_limit.yaml up -d
+#   ```
+#
 # Note: the custom caddy container needs to be build before use:
 #
 #   ```
@@ -20,9 +26,11 @@ services:
     image: ghcr.io/astral-sh/uv:python3.13-alpine
     volumes:
       - ./apikeys/apikeys.py:/apikeys.py
+      - ./apikeys/limits.yaml:/limits.yaml
       - ${DATA_DIR:-./data}:/data
     environment:
       - KEYS_FILE=/data/keys.csv
+      - LIMITS_FILE=/limits.yaml
       - CADDY_SNIPPET=/data/apikeys.caddy
     command: uv run --script /apikeys.py --compile
   shutter-api:
@@ -43,139 +51,9 @@ services:
       caddy.handle_errors.respond: "`{\"error\": \"Request is rate limited. See documentation! https://github.com/shutter-network/shutter-api?tab=readme-ov-file#rate-limits--authorization\", \"retry_after_seconds\": {http.response.header.Retry-After}, \"status\": {err.status_code}}`"
       caddy.handle_errors.header.Content-type: "application/json"
 
-      # Rate limits unauthorized
-      caddy.rate_limit_0: "@noApiKey"
-      caddy.rate_limit_0.log_key: " "
-
-      caddy.rate_limit_0.zone_0: register_identity__unauthorized
-      caddy.rate_limit_0.zone_0.key: "{remote_host}"
-      caddy.rate_limit_0.zone_0.events: 5
-      caddy.rate_limit_0.zone_0.window: 1d
-      caddy.rate_limit_0.zone_0.match.path: "*/time/register_identity*"
-      caddy.rate_limit_0.zone_0.match.method: POST
-
-      caddy.rate_limit_0.zone_1: get_data_for_encryption__unauthorized
-      caddy.rate_limit_0.zone_1.key: "{remote_host}"
-      caddy.rate_limit_0.zone_1.events: 10
-      caddy.rate_limit_0.zone_1.window: 1d
-      caddy.rate_limit_0.zone_1.match.path: "*/time/get_data_for_encryption*"
-      caddy.rate_limit_0.zone_1.match.method: GET
-
-      caddy.rate_limit_0.zone_2: get_decryption_key__unauthorized
-      caddy.rate_limit_0.zone_2.key: "{remote_host}"
-      caddy.rate_limit_0.zone_2.events: 20
-      caddy.rate_limit_0.zone_2.window: 1d
-      caddy.rate_limit_0.zone_2.match.path: "*/time/get_decryption_key*"
-      caddy.rate_limit_0.zone_2.match.method: GET
-
-      caddy.rate_limit_0.zone_3: decrypt_commitment__unauthorized
-      caddy.rate_limit_0.zone_3.key: "{remote_host}"
-      caddy.rate_limit_0.zone_3.events: 10
-      caddy.rate_limit_0.zone_3.window: 1d
-      caddy.rate_limit_0.zone_3.match.path: "*/decrypt_commitment*"
-      caddy.rate_limit_0.zone_3.match.method: GET
-
-      caddy.rate_limit_0.zone_4: compile_event_trigger_definition__unauthorized
-      caddy.rate_limit_0.zone_4.key: "{remote_host}"
-      caddy.rate_limit_0.zone_4.events: 20
-      caddy.rate_limit_0.zone_4.window: 1d
-      caddy.rate_limit_0.zone_4.match.path: "*/event/compile_trigger_definition*"
-      caddy.rate_limit_0.zone_4.match.method: POST
-
-      caddy.rate_limit_0.zone_5: register_event_identity__unauthorized
-      caddy.rate_limit_0.zone_5.key: "{remote_host}"
-      caddy.rate_limit_0.zone_5.events: 5
-      caddy.rate_limit_0.zone_5.window: 1d
-      caddy.rate_limit_0.zone_5.match.path: "*/event/register_identity*"
-      caddy.rate_limit_0.zone_5.match.method: POST
-
-      caddy.rate_limit_0.zone_6: get_event_trigger_expiration_block__unauthorized
-      caddy.rate_limit_0.zone_6.key: "{remote_host}"
-      caddy.rate_limit_0.zone_6.events: 20
-      caddy.rate_limit_0.zone_6.window: 1d
-      caddy.rate_limit_0.zone_6.match.path: "*/event/get_trigger_expiration_block*"
-      caddy.rate_limit_0.zone_6.match.method: GET
-
-      caddy.rate_limit_0.zone_7: get_event_decryption_key__unauthorized
-      caddy.rate_limit_0.zone_7.key: "{remote_host}"
-      caddy.rate_limit_0.zone_7.events: 20
-      caddy.rate_limit_0.zone_7.window: 1d
-      caddy.rate_limit_0.zone_7.match.path: "*/event/get_decryption_key*"
-      caddy.rate_limit_0.zone_7.match.method: GET
-
-      caddy.rate_limit_0.zone_8: event_get_data_for_encryption__unauthorized
-      caddy.rate_limit_0.zone_8.key: "{remote_host}"
-      caddy.rate_limit_0.zone_8.events: 10
-      caddy.rate_limit_0.zone_8.window: 1d
-      caddy.rate_limit_0.zone_8.match.path: "*/event/get_data_for_encryption*"
-      caddy.rate_limit_0.zone_8.match.method: GET
-
-      # Rate limits with api key
-      caddy.rate_limit_1: "@withApiKey"
-      caddy.rate_limit_1.log_key: " "
-
-      caddy.rate_limit_1.zone_0: register_identity__authorized
-      caddy.rate_limit_1.zone_0.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_0.events: 500
-      caddy.rate_limit_1.zone_0.window: 1d
-      caddy.rate_limit_1.zone_0.match.path: "*/time/register_identity*"
-      caddy.rate_limit_1.zone_0.match.method: POST
-
-      caddy.rate_limit_1.zone_1: get_data_for_encryption__authorized
-      caddy.rate_limit_1.zone_1.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_1.events: 1000
-      caddy.rate_limit_1.zone_1.window: 1d
-      caddy.rate_limit_1.zone_1.match.path: "*/time/get_data_for_encryption*"
-      caddy.rate_limit_1.zone_1.match.method: GET
-
-      caddy.rate_limit_1.zone_2: get_decryption_key__authorized
-      caddy.rate_limit_1.zone_2.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_2.events: 2000
-      caddy.rate_limit_1.zone_2.window: 1d
-      caddy.rate_limit_1.zone_2.match.path: "*/time/get_decryption_key*"
-      caddy.rate_limit_1.zone_2.match.method: GET
-
-      caddy.rate_limit_1.zone_3: decrypt_commitment__authorized
-      caddy.rate_limit_1.zone_3.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_3.events: 1000
-      caddy.rate_limit_1.zone_3.window: 1d
-      caddy.rate_limit_1.zone_3.match.path: "*/decrypt_commitment*"
-      caddy.rate_limit_1.zone_3.match.method: GET
-
-      caddy.rate_limit_1.zone_4: compile_event_trigger_definition__authorized
-      caddy.rate_limit_1.zone_4.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_4.events: 2000
-      caddy.rate_limit_1.zone_4.window: 1d
-      caddy.rate_limit_1.zone_4.match.path: "*/event/compile_trigger_definition*"
-      caddy.rate_limit_1.zone_4.match.method: POST
-
-      caddy.rate_limit_1.zone_5: register_event_identity__authorized
-      caddy.rate_limit_1.zone_5.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_5.events: 500
-      caddy.rate_limit_1.zone_5.window: 1d
-      caddy.rate_limit_1.zone_5.match.path: "*/event/register_identity*"
-      caddy.rate_limit_1.zone_5.match.method: POST
-
-      caddy.rate_limit_1.zone_6: get_event_trigger_expiration_block__authorized
-      caddy.rate_limit_1.zone_6.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_6.events: 2000
-      caddy.rate_limit_1.zone_6.window: 1d
-      caddy.rate_limit_1.zone_6.match.path: "*/event/get_trigger_expiration_block*"
-      caddy.rate_limit_1.zone_6.match.method: GET
-
-      caddy.rate_limit_1.zone_7: get_event_decryption_key__authorized
-      caddy.rate_limit_1.zone_7.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_7.events: 2000
-      caddy.rate_limit_1.zone_7.window: 1d
-      caddy.rate_limit_1.zone_7.match.path: "*/event/get_decryption_key*"
-      caddy.rate_limit_1.zone_7.match.method: GET
-
-      caddy.rate_limit_1.zone_8: event_get_data_for_encryption__authorized
-      caddy.rate_limit_1.zone_8.key: "{header.Authorization}"
-      caddy.rate_limit_1.zone_8.events: 1000
-      caddy.rate_limit_1.zone_8.window: 1d
-      caddy.rate_limit_1.zone_8.match.path: "*/event/get_data_for_encryption*"
-      caddy.rate_limit_1.zone_8.match.method: GET
+      # Rate limit zones are no longer configured here — they are compiled into
+      # the imported snippet above from apikeys/limits.yaml, which holds every
+      # tier's limit for every endpoint in one table. Edit that file, not this one.
 
   caddy:
     build:
@@ -188,4 +66,4 @@ services:
     command: docker-proxy run
     depends_on:
       compiler:
-          condition: service_completed_successfully
+        condition: service_completed_successfully

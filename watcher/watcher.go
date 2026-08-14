@@ -46,7 +46,7 @@ func (w *Watcher) Start(ctx context.Context, runner service.Runner) error {
 					}); err != nil {
 						log.Err(err).Msg("failed to insert decryption key")
 					}
-					metrics.TotalDecryptionKeysReceived.Inc()
+					metrics.DecryptionKeysReceived.Inc()
 				}
 			}
 		}

@@ -2,32 +2,32 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-var TotalSuccessfulIdentityRegistration = prometheus.NewCounter(
+var SuccessfulIdentityRegistrations = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Namespace: "shutter_api",
-		Name:      "total_successful_identities_registration",
-		Help:      "counter of successful identity registration",
+		Name:      "successful_identity_registrations_total",
+		Help:      "Count of successful identity registrations.",
 	},
 )
 
-var TotalDecryptionKeysReceived = prometheus.NewCounter(
+var DecryptionKeysReceived = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Namespace: "shutter_api",
-		Name:      "total_decryption_keys_received",
-		Help:      "counter of total dec keys received",
+		Name:      "decryption_keys_received_total",
+		Help:      "Count of decryption keys received from the keypers.",
 	},
 )
 
-var TotalFailedRPCCalls = prometheus.NewCounter(
+var FailedRPCCalls = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Namespace: "shutter_api",
-		Name:      "total_failed_rpc_calls",
-		Help:      "Counter of failed rpc calls",
+		Name:      "failed_rpc_calls_total",
+		Help:      "Count of failed RPC calls.",
 	},
 )
 
 func InitMetrics() {
-	prometheus.MustRegister(TotalSuccessfulIdentityRegistration)
-	prometheus.MustRegister(TotalDecryptionKeysReceived)
-	prometheus.MustRegister(TotalFailedRPCCalls)
+	prometheus.MustRegister(SuccessfulIdentityRegistrations)
+	prometheus.MustRegister(DecryptionKeysReceived)
+	prometheus.MustRegister(FailedRPCCalls)
 }

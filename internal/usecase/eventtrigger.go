@@ -288,7 +288,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	blockNumber, err := uc.ethClient.BlockNumber(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for recent block",
 			"",
@@ -300,7 +300,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for keyper set index",
 			"",
@@ -312,7 +312,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for eon key")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for eon key",
 			"",
@@ -335,7 +335,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	chainId, err := uc.ethClient.ChainID(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while quering chain id")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying chain id",
 			"",
@@ -411,7 +411,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 	tx, err := uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"failed to register identity",
 			"",
@@ -441,7 +441,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 
 	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identity, ttl)
 
-	metrics.TotalSuccessfulIdentityRegistration.Inc()
+	metrics.SuccessfulIdentityRegistrations.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),
@@ -560,7 +560,7 @@ func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity str
 		blockNumber, err := uc.ethClient.BlockNumber(ctx)
 		if err != nil {
 			log.Err(err).Msg("err encountered while querying for recent block")
-			metrics.TotalFailedRPCCalls.Inc()
+			metrics.FailedRPCCalls.Inc()
 			err := httpError.NewHttpError(
 				"error encountered while querying for recent block",
 				"",
@@ -572,7 +572,7 @@ func (uc *CryptoUsecase) GetEventDecryptionKey(ctx context.Context, identity str
 		eonUint, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 		if err != nil {
 			log.Err(err).Msg("err encountered while querying current eon")
-			metrics.TotalFailedRPCCalls.Inc()
+			metrics.FailedRPCCalls.Inc()
 			err := httpError.NewHttpError(
 				"error encountered while querying current eon",
 				"",

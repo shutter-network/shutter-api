@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/defiweb/go-sigparser"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -23,6 +23,7 @@ import (
 	"github.com/shutter-network/shutter-api/internal/data"
 	httpError "github.com/shutter-network/shutter-api/internal/error"
 	sherror "github.com/shutter-network/shutter-api/internal/error"
+	"github.com/shutter-network/shutter-api/internal/txmgr"
 	"github.com/shutter-network/shutter-api/metrics"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
 )
@@ -332,18 +333,6 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
-	chainId, err := uc.ethClient.ChainID(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while quering chain id")
-		metrics.FailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying chain id",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
 	eventTriggerDefinition, err := hexutil.Decode(eventTriggerDefinitionHex)
 	if err != nil {
 		err := httpError.NewHttpError(
@@ -365,18 +354,8 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
-	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainId)
-	if err != nil {
-		log.Err(err).Msg("err encountered while creating signer")
-		err := httpError.NewHttpError(
-			"error encountered while registering identity",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	identity := common.ComputeEventIdentity(identityPrefix[:], newSigner.From, eventTriggerDefinition)
+	sender := uc.txManager.From()
+	identity := common.ComputeEventIdentity(identityPrefix[:], sender, eventTriggerDefinition)
 
 	_, err = uc.dbQuery.GetEventIdentityRegistration(ctx, data.GetEventIdentityRegistrationParams{
 		Eon:      int64(eon),
@@ -401,45 +380,37 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		return nil, &err
 	}
 
-	publicAddress := crypto.PubkeyToAddress(*uc.config.PublicKey)
-
-	opts := bind.TransactOpts{
-		From:   publicAddress,
-		Signer: newSigner.Signer,
-	}
-
-	tx, err := uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
-	if err != nil {
-		log.Err(err).Msg("failed to send transaction")
-		metrics.FailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"failed to register identity",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-	// not launching a routine to monitor the transaction
-	// we return the transaction hash in response to allow
-	// users the ability to monitor it themselves
-
-	// Store the registration in database
-	txHashBytes := tx.Hash().Bytes()
-	err = uc.dbQuery.InsertEventIdentityRegistration(ctx, data.InsertEventIdentityRegistrationParams{
+	events := uc.txManager.Send(func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		return uc.shutterEventRegistryContract.Register(opts, eon, identityPrefix, eventTriggerDefinition, ttl)
+	})
+	registration := data.InsertEventIdentityRegistrationParams{
 		Eon:                    int64(eon),
 		Identity:               identity,
 		IdentityPrefix:         identityPrefix[:],
-		Sender:                 newSigner.From.Hex(),
+		Sender:                 sender.Hex(),
 		EventTriggerDefinition: eventTriggerDefinition,
-		TxHash:                 txHashBytes,
-	})
-	if err != nil {
-		log.Err(err).Msg("err encountered while storing event identity registration")
-		// Note: Transaction already sent, so we log the error but don't fail the request
-		// The registration is on-chain even if DB insert fails
 	}
 
-	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identity, ttl)
+	txHash, httpErr := awaitSubmission(ctx, events)
+	if httpErr != nil {
+		// Giving up waiting does not stop the transaction, so an identity may yet
+		// be registered on chain that the API has no record of. Hand the request
+		// over instead of dropping it, and let the row be written when the
+		// transaction turns up.
+		go uc.recordEventRegistration(events, registration, ttl, false)
+		return nil, httpErr
+	}
+
+	registration.TxHash = txHash.Bytes()
+	err = uc.dbQuery.InsertEventIdentityRegistration(ctx, registration)
+	if err != nil {
+		// The transaction is already on its way, so the registration happens
+		// whether or not this worked. Answering with an error would be a lie;
+		// recordEventRegistration gets another attempt at the row instead.
+		log.Err(err).Msg("err encountered while storing event identity registration")
+	}
+
+	go uc.recordEventRegistration(events, registration, ttl, err == nil)
 
 	metrics.SuccessfulIdentityRegistrations.Inc()
 	return &RegisterIdentityResponse{
@@ -447,37 +418,83 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),
 		IdentityPrefix: common.PrefixWith0x(hex.EncodeToString(identityPrefix[:])),
 		EonKey:         common.PrefixWith0x(hex.EncodeToString(eonKeyBytes)),
-		TxHash:         tx.Hash().Hex(),
+		TxHash:         txHash.Hex(),
 	}, nil
 }
 
-func (uc *CryptoUsecase) updateEventIdentityExpirationBlockNumber(txHash ecommon.Hash, eon uint64, identity []byte, ttl uint64) {
+// recordEventRegistration follows a registration to its conclusion and keeps the
+// database in step with it. It runs in a goroutine of its own because it outlives
+// the request by design: the response is committed as soon as there is a hash,
+// while the transaction is only mined blocks later.
+//
+// inserted says whether the row already exists. A request that gave up waiting, or
+// whose own insert failed, leaves it to this, so that an identity registered on
+// chain is not one the API has no record of.
+func (uc *CryptoUsecase) recordEventRegistration(
+	events <-chan txmgr.Event,
+	registration data.InsertEventIdentityRegistrationParams,
+	ttl uint64,
+	inserted bool,
+) {
+	// Deliberately not the request's context, which is cancelled once the response
+	// is written. Reading stops on its own when the manager ends the request.
 	ctx := context.Background()
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
 
-	for {
-		receipt, err := uc.ethClient.TransactionReceipt(ctx, txHash)
-		if err == nil {
-			if receipt.Status == 0 {
-				log.Error().Str("tx_hash", txHash.Hex()).Msg("event identity registration transaction failed")
-				return
+	for ev := range events {
+		switch {
+		case ev.Tx != nil:
+			registration.TxHash = ev.Tx.Hash().Bytes()
+			if !inserted {
+				inserted = uc.insertEventRegistration(ctx, registration)
 			}
-
-			expirationBlockNumber := receipt.BlockNumber.Uint64() + ttl
-
-			err = uc.dbQuery.UpdateEventIdentityRegistrationExpirationBlockNumber(ctx, data.UpdateEventIdentityRegistrationExpirationBlockNumberParams{
-				ExpirationBlockNumber: int64(expirationBlockNumber),
-				Eon:                   int64(eon),
-				Identity:              identity,
-			})
-			if err != nil {
-				log.Err(err).Str("tx_hash", txHash.Hex()).Msg("failed to update expiration block number")
+		case ev.Receipt != nil:
+			registration.TxHash = ev.Receipt.TxHash.Bytes()
+			if !inserted {
+				uc.insertEventRegistration(ctx, registration)
 			}
-			return
+			uc.recordExpirationBlockNumber(ctx, registration, ttl, ev.Receipt)
+		case ev.Err != nil:
+			log.Err(ev.Err).
+				Str("identity", hex.EncodeToString(registration.Identity)).
+				Msg("event identity registration was not mined")
 		}
+	}
+}
 
-		<-ticker.C
+// insertEventRegistration writes the registration row and reports whether that
+// worked. A failure is logged rather than retried, because the next event is
+// another chance at it.
+func (uc *CryptoUsecase) insertEventRegistration(ctx context.Context, registration data.InsertEventIdentityRegistrationParams) bool {
+	if err := uc.dbQuery.InsertEventIdentityRegistration(ctx, registration); err != nil {
+		log.Err(err).Str("tx_hash", hex.EncodeToString(registration.TxHash)).
+			Msg("err encountered while storing event identity registration")
+		return false
+	}
+	return true
+}
+
+// recordExpirationBlockNumber fills in the block the registration expires at,
+// which cannot be known before the transaction is mined.
+func (uc *CryptoUsecase) recordExpirationBlockNumber(
+	ctx context.Context,
+	registration data.InsertEventIdentityRegistrationParams,
+	ttl uint64,
+	receipt *types.Receipt,
+) {
+	if receipt.Status == types.ReceiptStatusFailed {
+		log.Error().Str("tx_hash", receipt.TxHash.Hex()).
+			Msg("event identity registration transaction reverted")
+		return
+	}
+
+	err := uc.dbQuery.UpdateEventIdentityRegistrationExpirationBlockNumber(ctx, data.UpdateEventIdentityRegistrationExpirationBlockNumberParams{
+		ExpirationBlockNumber: int64(receipt.BlockNumber.Uint64() + ttl),
+		Eon:                   registration.Eon,
+		Identity:              registration.Identity,
+	})
+	if err != nil {
+		log.Err(err).Str("tx_hash", receipt.TxHash.Hex()).
+			Msg("failed to update expiration block number")
 	}
 }
 
@@ -503,8 +520,7 @@ func (uc *CryptoUsecase) GetEventTriggerExpirationBlock(ctx context.Context, eon
 		return nil, &err
 	}
 
-	address := crypto.PubkeyToAddress(uc.config.SigningKey.PublicKey)
-	sender := address.Hex()
+	sender := uc.txManager.From().Hex()
 
 	expirationBlockNumber, err := uc.dbQuery.GetEventTriggerExpirationBlockNumber(ctx, data.GetEventTriggerExpirationBlockNumberParams{
 		Eon:      int64(eon),

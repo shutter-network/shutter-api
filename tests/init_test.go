@@ -27,6 +27,7 @@ type TestShutterService struct {
 	keyperSetManagerContract     *mock.MockKeyperSetManager
 	keyBroadcastContract         *mock.MockKeyBroadcast
 	ethClient                    *mock.MockEthClient
+	txManager                    *mock.MockTxManager
 }
 
 func TestShutterServiceSuite(t *testing.T) {
@@ -59,7 +60,8 @@ func (s *TestShutterService) SetupSuite() {
 	s.keyBroadcastContract = new(mock.MockKeyBroadcast)
 	s.keyperSetManagerContract = new(mock.MockKeyperSetManager)
 	s.ethClient = new(mock.MockEthClient)
-	s.cryptoUsecase = usecase.NewCryptoUsecase(s.testDB.DbInstance, s.shutterRegistryContract, s.shutterEventRegistryContract, s.keyperSetManagerContract, s.keyBroadcastContract, s.ethClient, s.config)
+	s.txManager = mock.NewMockTxManager(crypto.PubkeyToAddress(*publicKey))
+	s.cryptoUsecase = usecase.NewCryptoUsecase(s.testDB.DbInstance, s.shutterRegistryContract, s.shutterEventRegistryContract, s.keyperSetManagerContract, s.keyBroadcastContract, s.ethClient, s.txManager, s.config)
 }
 
 func (s *TestShutterService) BeforeTest(suiteName, testName string) {
@@ -68,6 +70,7 @@ func (s *TestShutterService) BeforeTest(suiteName, testName string) {
 	s.keyBroadcastContract.ExpectedCalls = nil
 	s.keyperSetManagerContract.ExpectedCalls = nil
 	s.ethClient.ExpectedCalls = nil
+	s.txManager.Reset()
 }
 
 func generateRandomETHAccount() (*ecdsa.PrivateKey, *ecdsa.PublicKey, string, error) {

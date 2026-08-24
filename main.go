@@ -9,6 +9,7 @@ import (
 	shutterAPICommon "github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/common/database"
 	"github.com/shutter-network/shutter-api/internal/router"
+	"github.com/shutter-network/shutter-api/internal/txmgr"
 	"github.com/shutter-network/shutter-api/metrics"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -194,9 +195,22 @@ func main() {
 	if config.DisableEventAPI {
 		log.Info().Msg("Event API disabled: SHUTTER_EVENT_REGISTRY_CONTRACT_ADDRESS not configured")
 	}
-	app := router.NewRouter(ctx, db, contract, client, config)
+	// One manager for the whole process: it owns the nonce sequence of the signing
+	// key, which only works if every registration goes through the same one.
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		log.Err(err).Msg("failed to query chain id")
+		return
+	}
+	txManager, err := txmgr.NewManager(client, signingKey, chainID, txmgr.DefaultConfig())
+	if err != nil {
+		log.Err(err).Msg("failed to instantiate transaction manager")
+		return
+	}
+
+	app := router.NewRouter(ctx, db, contract, client, txManager, config)
 	watcher := watcher.NewWatcher(config, db)
-	group, deferFn := service.RunBackground(ctx, watcher)
+	group, deferFn := service.RunBackground(ctx, watcher, txManager)
 	defer deferFn()
 
 	if metricsConfig.Enabled {

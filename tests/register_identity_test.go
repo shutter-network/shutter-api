@@ -48,11 +48,6 @@ func (s *TestShutterService) TestRegisterIdentity() {
 		Return(eonPublicKey.Marshal(), nil).
 		Twice()
 
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
-		Twice()
-
 	s.shutterRegistryContract.
 		On("Registrations", mock.AnythingOfType("*bind.CallOpts"), [32]byte(identity)).
 		Return(struct {

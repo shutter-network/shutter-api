@@ -23,6 +23,7 @@ import (
 	"github.com/shutter-network/shutter-api/common/database"
 	"github.com/shutter-network/shutter-api/internal/data"
 	"github.com/shutter-network/shutter-api/internal/router"
+	"github.com/shutter-network/shutter-api/internal/txmgr"
 	"github.com/shutter-network/shutter-api/watcher"
 	"github.com/stretchr/testify/suite"
 )
@@ -105,12 +106,21 @@ func (s *TestShutterService) SetupSuite() {
 	s.Require().NoError(database.RunMigrations(ctx, dbURL, migrationsPath))
 
 	watcher := watcher.NewWatcher(s.config, s.db)
-	group, deferFn := service.RunBackground(ctx, watcher)
+
+	// The real manager against the real chain, as production runs it: the
+	// registration endpoints have no transaction to report until its worker
+	// submits one.
+	chainID, err := s.ethClient.ChainID(ctx)
+	s.Require().NoError(err)
+	txManager, err := txmgr.NewManager(s.ethClient, signingKey, chainID, txmgr.DefaultConfig())
+	s.Require().NoError(err)
+
+	group, deferFn := service.RunBackground(ctx, watcher, txManager)
 	defer deferFn()
 	go func() {
 		s.Require().NoError(group.Wait())
 	}()
-	s.router = router.NewRouter(ctx, s.db, s.contract, s.ethClient, s.config)
+	s.router = router.NewRouter(ctx, s.db, s.contract, s.ethClient, txManager, s.config)
 	s.testServer = httptest.NewServer(s.router)
 }
 

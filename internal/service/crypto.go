@@ -32,10 +32,11 @@ func NewCryptoService(
 	db *pgxpool.Pool,
 	contract *common.Contract,
 	ethClient *ethclient.Client,
+	txManager usecase.TxManagerInterface,
 	config *common.Config,
 ) *CryptoService {
 	return &CryptoService{
-		CryptoUsecase: usecase.NewCryptoUsecase(db, contract.ShutterRegistryContract, contract.ShutterEventRegistryContract, contract.KeyperSetManagerContract, contract.KeyBroadcastContract, ethClient, config),
+		CryptoUsecase: usecase.NewCryptoUsecase(db, contract.ShutterRegistryContract, contract.ShutterEventRegistryContract, contract.KeyperSetManagerContract, contract.KeyBroadcastContract, ethClient, txManager, config),
 	}
 }
 
@@ -233,6 +234,7 @@ func (svc *CryptoService) GetDataForEncryptionEvent(ctx *gin.Context) {
 //		@Failure		400		{object}	error.Http							"Invalid Register identity request."
 //		@Failure		429			{object}	error.Http							"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http							"Internal server error."
+//		@Failure		503			{object}	error.Http							"Too many registrations in flight. Retry."
 //	 	@Security		BearerAuth
 //		@Router			/time/register_identity [post]
 func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
@@ -405,6 +407,7 @@ func CompileEventTriggerDefinition(ctx *gin.Context) {
 //		@Failure		429			{object}	error.Http						"Too many requests. Rate limited."
 //		@Failure		500			{object}	error.Http						"Internal server error."
 //		@Failure		501			{object}	error.Http						"Event API is disabled on this deployment."
+//		@Failure		503			{object}	error.Http						"Too many registrations in flight. Retry."
 //	 	@Security		BearerAuth
 //		@Router			/event/register_identity [post]
 func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {

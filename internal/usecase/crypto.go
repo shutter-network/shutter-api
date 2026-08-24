@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,11 +13,9 @@ import (
 	cryptorand "crypto/rand"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ecommon "github.com/ethereum/go-ethereum/common"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
@@ -57,8 +54,6 @@ type KeyBroadcastInterface interface {
 
 type EthClientInterface interface {
 	BlockNumber(ctx context.Context) (uint64, error)
-	ChainID(ctx context.Context) (*big.Int, error)
-	TransactionReceipt(ctx context.Context, txHash ecommon.Hash) (*types.Receipt, error)
 }
 
 type GetDecryptionKeyResponse struct {
@@ -91,6 +86,7 @@ type CryptoUsecase struct {
 	keyperSetManagerContract     KeyperSetManagerInterface
 	keyBroadcastContract         KeyBroadcastInterface
 	ethClient                    EthClientInterface
+	txManager                    TxManagerInterface
 	config                       *common.Config
 }
 
@@ -101,6 +97,7 @@ func NewCryptoUsecase(
 	keyperSetManagerContract KeyperSetManagerInterface,
 	keyBroadcastContract KeyBroadcastInterface,
 	ethClient EthClientInterface,
+	txManager TxManagerInterface,
 	config *common.Config,
 ) *CryptoUsecase {
 	return &CryptoUsecase{
@@ -111,36 +108,9 @@ func NewCryptoUsecase(
 		keyperSetManagerContract:     keyperSetManagerContract,
 		keyBroadcastContract:         keyBroadcastContract,
 		ethClient:                    ethClient,
+		txManager:                    txManager,
 		config:                       config,
 	}
-}
-
-// getSigner returns the signer for the API signer address.
-func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *httpError.Http) {
-	chainID, err := uc.ethClient.ChainID(ctx)
-	if err != nil {
-		log.Err(err).Msg("err encountered while querying chain id")
-		metrics.FailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"error encountered while querying chain id",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	newSigner, err := bind.NewKeyedTransactorWithChainID(uc.config.SigningKey, chainID)
-	if err != nil {
-		log.Err(err).Msg("err encountered while creating signer")
-		err := httpError.NewHttpError(
-			"error encountered while creating signer",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-
-	return newSigner, nil
 }
 
 func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
@@ -381,12 +351,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 
 // GetDataForEncryptionEvent is the event-based variant which uses the API signer address to compute the identity.
 func (uc *CryptoUsecase) GetDataForEncryptionEvent(ctx context.Context, identityPrefixStringified string, triggerDefinitionHex string) (*GetDataForEncryptionResponse, *httpError.Http) {
-	newSigner, httpErr := uc.getSigner(ctx)
-	if httpErr != nil {
-		return nil, httpErr
-	}
-
-	return uc.GetDataForEncryption(ctx, newSigner.From.Hex(), identityPrefixStringified, triggerDefinitionHex)
+	return uc.GetDataForEncryption(ctx, uc.txManager.From().Hex(), identityPrefixStringified, triggerDefinitionHex)
 }
 
 func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimestamp uint64, identityPrefixStringified string) (*RegisterIdentityResponse, *httpError.Http) {
@@ -486,12 +451,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		return nil, &err
 	}
 
-	newSigner, httpErr := uc.getSigner(ctx)
-	if httpErr != nil {
-		return nil, httpErr
-	}
-
-	identity := common.ComputeIdentity(identityPrefix[:], newSigner.From)
+	identity := common.ComputeIdentity(identityPrefix[:], uc.txManager.From())
 
 	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identity))
 	if err != nil {
@@ -515,27 +475,19 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		return nil, &err
 	}
 
-	publicAddress := crypto.PubkeyToAddress(*uc.config.PublicKey)
+	events := uc.txManager.Send(func(opts *bind.TransactOpts) (*types.Transaction, error) {
+		return uc.shutterRegistryContract.Register(opts, eon, identityPrefix, decryptionTimestamp)
+	})
 
-	opts := bind.TransactOpts{
-		From:   publicAddress,
-		Signer: newSigner.Signer,
+	txHash, httpErr := awaitSubmission(ctx, events)
+	if httpErr != nil {
+		return nil, httpErr
 	}
 
-	tx, err := uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
-	if err != nil {
-		log.Err(err).Msg("failed to send transaction")
-		metrics.FailedRPCCalls.Inc()
-		err := httpError.NewHttpError(
-			"failed to register identity",
-			"",
-			http.StatusInternalServerError,
-		)
-		return nil, &err
-	}
-	// not launching a routine to monitor the transaction
-	// we return the transaction hash in response to allow
-	// users the ability to monitor it themselves
+	// The rest of the events go unread on purpose. The response is committed to a
+	// hash, so a later version of the transaction cannot change it, and the
+	// transaction manager logs how the registration ends either way. Clients are
+	// expected to follow the hash themselves.
 
 	metrics.SuccessfulIdentityRegistrations.Inc()
 	return &RegisterIdentityResponse{
@@ -543,7 +495,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),
 		IdentityPrefix: common.PrefixWith0x(hex.EncodeToString(identityPrefix[:])),
 		EonKey:         common.PrefixWith0x(hex.EncodeToString(eonKeyBytes)),
-		TxHash:         tx.Hash().Hex(),
+		TxHash:         txHash.Hex(),
 	}, nil
 }
 

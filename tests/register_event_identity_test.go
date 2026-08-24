@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/shutter-network/shutter-api/common"
 	"github.com/shutter-network/shutter-api/internal/data"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -26,7 +28,7 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 	eon := rand.Uint64()
 
 	// Hardcoded valid event trigger definition
-	eventTriggerDefinitionHex := "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+	eventTriggerDefinitionHex := s.validEventTriggerDefinition()
 	eventTriggerDefinitionBytes, err := hexutil.Decode(eventTriggerDefinitionHex)
 	s.Require().NoError(err)
 
@@ -54,32 +56,27 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
-		Once()
-
 	s.shutterEventRegistryContract.
 		On("Register", mock.Anything, eon, [32]byte(identityPrefix), eventTriggerDefinitionBytes, ttl).
 		Return(randomTx, nil).
 		Once()
 
-	// Mock transaction receipt - use a different block number for the receipt
-	txBlockNumber := blockNumber + 5 // Transaction mined in a later block
+	// The transaction is mined in a later block, which is where the expiration is
+	// measured from.
+	txBlockNumber := blockNumber + 5
 	receipt := &types.Receipt{
 		Status:      types.ReceiptStatusSuccessful,
 		BlockNumber: big.NewInt(int64(txBlockNumber)),
+		TxHash:      randomTx.Hash(),
 	}
-
-	s.ethClient.
-		On("TransactionReceipt", mock.Anything, randomTx.Hash()).
-		Return(receipt, nil).
-		Once()
-
 	expectedExpirationBlockNumber := int64(txBlockNumber + ttl)
 
 	response, err := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().Nil(err)
+
+	// The expiration block is only knowable once the transaction is mined, so the
+	// manager reports it after the response has already gone out.
+	s.txManager.Resolve(receipt)
 
 	s.Require().Equal(response.Eon, eon)
 	s.Require().Equal(common.PrefixWith0x(hex.EncodeToString(identity)), response.Identity)
@@ -112,7 +109,7 @@ func (s *TestShutterService) TestRegisterEventIdentity() {
 func (s *TestShutterService) TestRegisterEventIdentity_InvalidIdentityPrefix() {
 	ctx := context.Background()
 	ttl := uint64(100)
-	eventTriggerDefinitionHex := "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+	eventTriggerDefinitionHex := s.validEventTriggerDefinition()
 
 	// Test with invalid identity prefix length
 	invalidIdentityPrefix := "0x1234" // Too short
@@ -162,11 +159,6 @@ func (s *TestShutterService) TestRegisterEventIdentity_InvalidEventTriggerDefini
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
-		Once()
-
 	_, httpErr := s.cryptoUsecase.RegisterEventIdentity(ctx, invalidEventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().NotNil(httpErr)
 
@@ -209,11 +201,6 @@ func (s *TestShutterService) TestRegisterEventIdentity_TriggerDefinitionWithout0
 	s.keyBroadcastContract.
 		On("GetEonKey", nil, eon).
 		Return(eonPublicKey.Marshal(), nil).
-		Once()
-
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
 		Once()
 
 	_, httpErr := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHexWithoutPrefix, identityPrefixStringified, ttl)
@@ -261,11 +248,6 @@ func (s *TestShutterService) TestRegisterEventIdentity_ZeroBytesEventTriggerDefi
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
-		Once()
-
 	_, httpErr := s.cryptoUsecase.RegisterEventIdentity(ctx, zeroEventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().NotNil(httpErr)
 
@@ -282,7 +264,7 @@ func (s *TestShutterService) TestRegisterEventIdentity_EmptyIdentityPrefix() {
 	eon := rand.Uint64()
 
 	// Hardcoded valid event trigger definition
-	eventTriggerDefinitionHex := "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+	eventTriggerDefinitionHex := s.validEventTriggerDefinition()
 	eventTriggerDefinitionBytes, err := hexutil.Decode(eventTriggerDefinitionHex)
 	s.Require().NoError(err)
 
@@ -314,11 +296,6 @@ func (s *TestShutterService) TestRegisterEventIdentity_EmptyIdentityPrefix() {
 	s.keyBroadcastContract.
 		On("GetEonKey", nil, eon).
 		Return(eonPublicKey.Marshal(), nil).
-		Once()
-
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
 		Once()
 
 	// Mock will be called with the generated identity prefix (we can't predict it, so use mock.MatchedBy)
@@ -363,7 +340,7 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 	eon := rand.Uint64()
 
 	// Hardcoded valid event trigger definition
-	eventTriggerDefinitionHex := "0x01f86694953a0425accee2e05f22e78999c595ed2ee7183cf84fe480e205a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efe401e205a0000000000000000000000000812a6755975485c6e340f97de6790b34a94d1430c404c20402"
+	eventTriggerDefinitionHex := s.validEventTriggerDefinition()
 	eventTriggerDefinitionBytes, err := hexutil.Decode(eventTriggerDefinitionHex)
 	s.Require().NoError(err)
 
@@ -390,11 +367,6 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 	s.keyBroadcastContract.
 		On("GetEonKey", nil, eon).
 		Return(eonPublicKey.Marshal(), nil).
-		Once()
-
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
 		Once()
 
 	s.shutterEventRegistryContract.
@@ -445,14 +417,24 @@ func (s *TestShutterService) TestRegisterEventIdentity_AlreadyRegistered() {
 		Return(eonPublicKey.Marshal(), nil).
 		Once()
 
-	s.ethClient.
-		On("ChainID", ctx).
-		Return(big.NewInt(GnosisMainnetChainID), nil).
-		Once()
-
 	// Second registration should fail with "event identity already registered"
 	_, httpErr := s.cryptoUsecase.RegisterEventIdentity(ctx, eventTriggerDefinitionHex, identityPrefixStringified, ttl)
 	s.Require().NotNil(httpErr)
 	s.Require().Equal("event identity already registered", httpErr.Description)
 	s.Require().Equal(400, httpErr.StatusCode)
+}
+
+// validEventTriggerDefinition compiles a definition instead of hardcoding one, so
+// the fixture cannot fall behind the encoding version the keypers expect.
+func (s *TestShutterService) validEventTriggerDefinition() string {
+	resp, errs := usecase.CompileEventTriggerDefinitionInternal(usecase.EventTriggerDefinitionRequest{
+		ContractAddress: ethCommon.HexToAddress("0x953A0425ACCee2E05f22E78999c595eD2eE7183c"),
+		EventSignature:  "event Transfer(address indexed from, address indexed to, uint256 amount)",
+		Arguments: []usecase.EventArgument{
+			{Name: "from", Operator: "eq", Bytes: "0x812a6755975485C6E340F97dE6790B34a94D1430"},
+			{Name: "amount", Operator: "gte", Number: "2"},
+		},
+	})
+	s.Require().Empty(errs)
+	return resp.EventTriggerDefinition
 }

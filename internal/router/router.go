@@ -13,6 +13,7 @@ import (
 	"github.com/shutter-network/shutter-api/docs"
 	"github.com/shutter-network/shutter-api/internal/middleware"
 	"github.com/shutter-network/shutter-api/internal/service"
+	"github.com/shutter-network/shutter-api/internal/usecase"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -22,6 +23,7 @@ func NewRouter(
 	db *pgxpool.Pool,
 	contract *common.Contract,
 	ethClient *ethclient.Client,
+	txManager usecase.TxManagerInterface,
 	config *common.Config,
 ) *gin.Engine {
 	router := gin.New()
@@ -30,7 +32,7 @@ func NewRouter(
 	router.Use(cors.Default())
 	router.Use(middleware.ErrorHandler())
 
-	cryptoService := service.NewCryptoService(db, contract, ethClient, config)
+	cryptoService := service.NewCryptoService(db, contract, ethClient, txManager, config)
 	docs.SwaggerInfo.BasePath = "/api"
 	api := router.Group("/api")
 	{

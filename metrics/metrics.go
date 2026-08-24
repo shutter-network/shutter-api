@@ -31,4 +31,5 @@ func InitMetrics() {
 	prometheus.MustRegister(DecryptionKeysReceived)
 	prometheus.MustRegister(FailedRPCCalls)
 	initBalanceMetrics()
+	initTransactionMetrics()
 }

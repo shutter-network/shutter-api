@@ -84,12 +84,17 @@ func (p *BalancePoller) Start(ctx context.Context, runner service.Runner) error 
 // fire the very alert this metric exists to raise. Errors are never returned,
 // because the poller shares an error group with the API and a transient RPC
 // failure must not shut the service down.
-func (p *BalancePoller) poll(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, balancePollTimeout)
+func (p *BalancePoller) poll(parent context.Context) {
+	ctx, cancel := context.WithTimeout(parent, balancePollTimeout)
 	defer cancel()
 
 	wei, err := p.client.BalanceAt(ctx, p.address, nil)
 	if err != nil {
+		// Cancellations should not count as failed RPC calls. They are
+		// detected by checking if the parent context is done.
+		if parent.Err() != nil {
+			return
+		}
 		log.Err(err).Str("address", p.address.Hex()).Msg("failed to query signer balance")
 		FailedRPCCalls.Inc()
 		return

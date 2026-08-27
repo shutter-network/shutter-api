@@ -248,7 +248,9 @@ func (svc *CryptoService) RegisterIdentity(ctx *gin.Context) {
 		return
 	}
 
-	data, httpErr := svc.CryptoUsecase.RegisterIdentity(ctx, req.DecryptionTimestamp, req.IdentityPrefix)
+	// ctx.Request.Context() rather than ctx: gin.Context's Done channel is nil
+	// unless ContextWithFallback is set, so cancellation would never be seen.
+	data, httpErr := svc.CryptoUsecase.RegisterIdentity(ctx.Request.Context(), req.DecryptionTimestamp, req.IdentityPrefix)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return
@@ -420,7 +422,8 @@ func (svc *CryptoService) RegisterEventIdentity(ctx *gin.Context) {
 		return
 	}
 
-	data, httpErr := svc.CryptoUsecase.RegisterEventIdentity(ctx, req.EventTriggerDefinitionHex, req.IdentityPrefix, req.Ttl)
+	// See RegisterIdentity for why this is ctx.Request.Context() and not ctx.
+	data, httpErr := svc.CryptoUsecase.RegisterEventIdentity(ctx.Request.Context(), req.EventTriggerDefinitionHex, req.IdentityPrefix, req.Ttl)
 	if httpErr != nil {
 		ctx.Error(httpErr)
 		return

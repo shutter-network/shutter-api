@@ -28,6 +28,7 @@ import (
 	httpError "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/metrics"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
+	"golang.org/x/sync/semaphore"
 )
 
 const IdentityPrefixByteLength = 32
@@ -92,6 +93,9 @@ type CryptoUsecase struct {
 	keyBroadcastContract         KeyBroadcastInterface
 	ethClient                    EthClientInterface
 	config                       *common.Config
+	// sendSem serializes transaction submission to prevent concurrent requests
+	// producing transactions that use the same nonce.
+	sendSem *semaphore.Weighted
 }
 
 func NewCryptoUsecase(
@@ -112,6 +116,7 @@ func NewCryptoUsecase(
 		keyBroadcastContract:         keyBroadcastContract,
 		ethClient:                    ethClient,
 		config:                       config,
+		sendSem:                      semaphore.NewWeighted(1),
 	}
 }
 
@@ -141,6 +146,29 @@ func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *ht
 	}
 
 	return newSigner, nil
+}
+
+// submitTransaction runs submit while holding the submission semaphore, so that
+// only one transaction at a time resolves a nonce and is sent.
+//
+// The Http error is returned only when the semaphore could not be acquired,
+// which happens when ctx is cancelled while queued. A failure from submit
+// itself comes back as the plain error, so callers keep their own handling
+// for it.
+func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func() (*types.Transaction, error)) (*types.Transaction, *httpError.Http, error) {
+	if err := uc.sendSem.Acquire(ctx, 1); err != nil {
+		log.Err(err).Msg("context cancelled while waiting for sendSem")
+		httpErr := httpError.NewHttpError(
+			"internal server error",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &httpErr, nil
+	}
+	defer uc.sendSem.Release(1)
+
+	tx, err := submit()
+	return tx, nil, err
 }
 
 func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
@@ -522,7 +550,12 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		Signer: newSigner.Signer,
 	}
 
-	tx, err := uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
+	tx, httpErr, err := uc.submitTransaction(ctx, func() (*types.Transaction, error) {
+		return uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
+	})
+	if httpErr != nil {
+		return nil, httpErr
+	}
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")
 		metrics.FailedRPCCalls.Inc()

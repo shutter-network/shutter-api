@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -408,7 +409,12 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		Signer: newSigner.Signer,
 	}
 
-	tx, err := uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
+	tx, httpErr, err := uc.submitTransaction(ctx, func() (*types.Transaction, error) {
+		return uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
+	})
+	if httpErr != nil {
+		return nil, httpErr
+	}
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")
 		metrics.FailedRPCCalls.Inc()

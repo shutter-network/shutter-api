@@ -82,8 +82,9 @@ func (p *BalancePoller) Start(ctx context.Context, runner service.Runner) error 
 // poll reads the balance and updates the gauge. A failed read leaves the gauge
 // at its previous value: publishing a zero would look like an empty account and
 // fire the very alert this metric exists to raise. Errors are never returned,
-// because the poller shares an error group with the API and a transient RPC
-// failure must not shut the service down.
+// because the poller shares an errgroup with the metrics server and returning
+// one would cancel the group, taking the /metrics endpoint down over a
+// transient RPC failure.
 func (p *BalancePoller) poll(parent context.Context) {
 	ctx, cancel := context.WithTimeout(parent, balancePollTimeout)
 	defer cancel()

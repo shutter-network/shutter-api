@@ -31,7 +31,10 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-const IdentityPrefixByteLength = 32
+const (
+	IdentityPrefixByteLength            = 32
+	defaultTransactionSubmissionTimeout = 5 * time.Second
+)
 
 type ShutterregistryInterface interface {
 	Registrations(opts *bind.CallOpts, identity [32]byte) (
@@ -95,7 +98,8 @@ type CryptoUsecase struct {
 	config                       *common.Config
 	// sendSem serializes transaction submission to prevent concurrent requests
 	// producing transactions that use the same nonce.
-	sendSem *semaphore.Weighted
+	sendSem                      *semaphore.Weighted
+	transactionSubmissionTimeout time.Duration
 }
 
 func NewCryptoUsecase(
@@ -117,6 +121,7 @@ func NewCryptoUsecase(
 		ethClient:                    ethClient,
 		config:                       config,
 		sendSem:                      semaphore.NewWeighted(1),
+		transactionSubmissionTimeout: defaultTransactionSubmissionTimeout,
 	}
 }
 
@@ -151,11 +156,10 @@ func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *ht
 // submitTransaction runs submit while holding the submission semaphore, so that
 // only one transaction at a time resolves a nonce and is sent.
 //
-// The Http error is returned only when the semaphore could not be acquired,
-// which happens when ctx is cancelled while queued. A failure from submit
-// itself comes back as the plain error, so callers keep their own handling
-// for it.
-func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func() (*types.Transaction, error)) (*types.Transaction, *httpError.Http, error) {
+// The request context applies while waiting for the semaphore. Once submission
+// starts, an independent timeout prevents a stalled RPC from holding the
+// semaphore indefinitely.
+func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func(context.Context) (*types.Transaction, error)) (*types.Transaction, *httpError.Http, error) {
 	if err := uc.sendSem.Acquire(ctx, 1); err != nil {
 		log.Err(err).Msg("context cancelled while waiting for sendSem")
 		httpErr := httpError.NewHttpError(
@@ -167,7 +171,10 @@ func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func() (*
 	}
 	defer uc.sendSem.Release(1)
 
-	tx, err := submit()
+	submitCtx, cancelSubmit := context.WithTimeout(context.Background(), uc.transactionSubmissionTimeout)
+	defer cancelSubmit()
+
+	tx, err := submit(submitCtx)
 	return tx, nil, err
 }
 
@@ -550,7 +557,8 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		Signer: newSigner.Signer,
 	}
 
-	tx, httpErr, err := uc.submitTransaction(ctx, func() (*types.Transaction, error) {
+	tx, httpErr, err := uc.submitTransaction(ctx, func(submitCtx context.Context) (*types.Transaction, error) {
+		opts.Context = submitCtx
 		return uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
 	})
 	if httpErr != nil {

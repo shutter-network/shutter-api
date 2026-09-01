@@ -409,7 +409,8 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 		Signer: newSigner.Signer,
 	}
 
-	tx, httpErr, err := uc.submitTransaction(ctx, func() (*types.Transaction, error) {
+	tx, httpErr, err := uc.submitTransaction(ctx, func(submitCtx context.Context) (*types.Transaction, error) {
+		opts.Context = submitCtx
 		return uc.shutterEventRegistryContract.Register(&opts, eon, identityPrefix, eventTriggerDefinition, ttl)
 	})
 	if httpErr != nil {

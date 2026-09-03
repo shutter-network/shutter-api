@@ -171,7 +171,7 @@ func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func(cont
 	}
 	defer uc.sendSem.Release(1)
 
-	submitCtx, cancelSubmit := context.WithTimeout(context.Background(), uc.transactionSubmissionTimeout)
+	submitCtx, cancelSubmit := context.WithTimeout(context.WithoutCancel(ctx), uc.transactionSubmissionTimeout)
 	defer cancelSubmit()
 
 	tx, err := submit(submitCtx)

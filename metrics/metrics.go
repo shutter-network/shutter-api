@@ -2,11 +2,11 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-var SuccessfulIdentityRegistrations = prometheus.NewCounter(
+var IdentityRegistrationsSubmitted = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Namespace: "shutter_api",
-		Name:      "successful_identity_registrations_total",
-		Help:      "Count of successful identity registrations.",
+		Name:      "identity_registrations_submitted_total",
+		Help:      "Count of identity registration transactions submitted to the RPC node.",
 	},
 )
 
@@ -27,7 +27,7 @@ var FailedRPCCalls = prometheus.NewCounter(
 )
 
 func InitMetrics() {
-	prometheus.MustRegister(SuccessfulIdentityRegistrations)
+	prometheus.MustRegister(IdentityRegistrationsSubmitted)
 	prometheus.MustRegister(DecryptionKeysReceived)
 	prometheus.MustRegister(FailedRPCCalls)
 	initBalanceMetrics()

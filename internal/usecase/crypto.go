@@ -578,7 +578,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	// we return the transaction hash in response to allow
 	// users the ability to monitor it themselves
 
-	metrics.SuccessfulIdentityRegistrations.Inc()
+	metrics.IdentityRegistrationsSubmitted.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),

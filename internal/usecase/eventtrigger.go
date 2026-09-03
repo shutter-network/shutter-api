@@ -448,7 +448,7 @@ func (uc *CryptoUsecase) RegisterEventIdentity(ctx context.Context, eventTrigger
 
 	go uc.updateEventIdentityExpirationBlockNumber(tx.Hash(), eon, identity, ttl)
 
-	metrics.SuccessfulIdentityRegistrations.Inc()
+	metrics.IdentityRegistrationsSubmitted.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),

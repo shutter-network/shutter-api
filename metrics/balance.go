@@ -82,14 +82,20 @@ func (p *BalancePoller) Start(ctx context.Context, runner service.Runner) error 
 // poll reads the balance and updates the gauge. A failed read leaves the gauge
 // at its previous value: publishing a zero would look like an empty account and
 // fire the very alert this metric exists to raise. Errors are never returned,
-// because the poller shares an error group with the API and a transient RPC
-// failure must not shut the service down.
-func (p *BalancePoller) poll(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, balancePollTimeout)
+// because the poller shares an errgroup with the metrics server and returning
+// one would cancel the group, taking the /metrics endpoint down over a
+// transient RPC failure.
+func (p *BalancePoller) poll(parent context.Context) {
+	ctx, cancel := context.WithTimeout(parent, balancePollTimeout)
 	defer cancel()
 
 	wei, err := p.client.BalanceAt(ctx, p.address, nil)
 	if err != nil {
+		// Cancellations should not count as failed RPC calls. They are
+		// detected by checking if the parent context is done.
+		if parent.Err() != nil {
+			return
+		}
 		log.Err(err).Str("address", p.address.Hex()).Msg("failed to query signer balance")
 		FailedRPCCalls.Inc()
 		return

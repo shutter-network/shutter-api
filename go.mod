@@ -9,7 +9,6 @@ require (
 	github.com/ethereum/go-ethereum v1.15.11
 	github.com/gin-contrib/cors v1.7.3
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/joho/godotenv v1.5.1
 	github.com/libp2p/go-libp2p-pubsub v0.13.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/shutter-network/contracts/v2 v2.0.0-beta.2.0.20250908105003-7e53b1579b04
@@ -102,6 +101,7 @@ require (
 	github.com/koron/go-ssdp v0.0.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.2.0 // indirect
@@ -310,6 +310,6 @@ require (
 	github.com/shutter-network/shutter/shlib v0.1.19
 	github.com/swaggo/files v1.0.1
 	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.14.0
 	golang.org/x/text v0.25.0 // indirect
 )

@@ -200,7 +200,10 @@ func main() {
 	defer deferFn()
 
 	if metricsConfig.Enabled {
-		group, deferFn := service.RunBackground(ctx, metricsServer)
+		signerAddress := crypto.PubkeyToAddress(*config.PublicKey)
+		balancePoller := metrics.NewBalancePoller(client, signerAddress)
+
+		group, deferFn := service.RunBackground(ctx, metricsServer, balancePoller)
 		defer deferFn()
 		go func() {
 			if err := group.Wait(); err != nil {

@@ -28,9 +28,13 @@ import (
 	httpError "github.com/shutter-network/shutter-api/internal/error"
 	"github.com/shutter-network/shutter-api/metrics"
 	"github.com/shutter-network/shutter/shlib/shcrypto"
+	"golang.org/x/sync/semaphore"
 )
 
-const IdentityPrefixByteLength = 32
+const (
+	IdentityPrefixByteLength            = 32
+	defaultTransactionSubmissionTimeout = 5 * time.Second
+)
 
 type ShutterregistryInterface interface {
 	Registrations(opts *bind.CallOpts, identity [32]byte) (
@@ -92,6 +96,10 @@ type CryptoUsecase struct {
 	keyBroadcastContract         KeyBroadcastInterface
 	ethClient                    EthClientInterface
 	config                       *common.Config
+	// sendSem serializes transaction submission to prevent concurrent requests
+	// producing transactions that use the same nonce.
+	sendSem                      *semaphore.Weighted
+	transactionSubmissionTimeout time.Duration
 }
 
 func NewCryptoUsecase(
@@ -112,6 +120,8 @@ func NewCryptoUsecase(
 		keyBroadcastContract:         keyBroadcastContract,
 		ethClient:                    ethClient,
 		config:                       config,
+		sendSem:                      semaphore.NewWeighted(1),
+		transactionSubmissionTimeout: defaultTransactionSubmissionTimeout,
 	}
 }
 
@@ -120,7 +130,7 @@ func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *ht
 	chainID, err := uc.ethClient.ChainID(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying chain id")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying chain id",
 			"",
@@ -141,6 +151,31 @@ func (uc *CryptoUsecase) getSigner(ctx context.Context) (*bind.TransactOpts, *ht
 	}
 
 	return newSigner, nil
+}
+
+// submitTransaction runs submit while holding the submission semaphore, so that
+// only one transaction at a time resolves a nonce and is sent.
+//
+// The request context applies while waiting for the semaphore. Once submission
+// starts, an independent timeout prevents a stalled RPC from holding the
+// semaphore indefinitely.
+func (uc *CryptoUsecase) submitTransaction(ctx context.Context, submit func(context.Context) (*types.Transaction, error)) (*types.Transaction, *httpError.Http, error) {
+	if err := uc.sendSem.Acquire(ctx, 1); err != nil {
+		log.Err(err).Msg("context cancelled while waiting for sendSem")
+		httpErr := httpError.NewHttpError(
+			"internal server error",
+			"",
+			http.StatusInternalServerError,
+		)
+		return nil, &httpErr, nil
+	}
+	defer uc.sendSem.Release(1)
+
+	submitCtx, cancelSubmit := context.WithTimeout(context.WithoutCancel(ctx), uc.transactionSubmissionTimeout)
+	defer cancelSubmit()
+
+	tx, err := submit(submitCtx)
+	return tx, nil, err
 }
 
 func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) (*GetDecryptionKeyResponse, *httpError.Http) {
@@ -168,7 +203,7 @@ func (uc *CryptoUsecase) GetDecryptionKey(ctx context.Context, identity string) 
 	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identityBytes))
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying contract")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error while querying for identity from the contract",
 			"",
@@ -301,7 +336,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	blockNumber, err := uc.ethClient.BlockNumber(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for recent block",
 			"",
@@ -313,7 +348,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for keyper set index",
 			"",
@@ -325,7 +360,7 @@ func (uc *CryptoUsecase) GetDataForEncryption(ctx context.Context, address strin
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for eon key")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for eon key",
 			"",
@@ -442,7 +477,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	blockNumber, err := uc.ethClient.BlockNumber(ctx)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for recent block")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for recent block",
 			"",
@@ -454,7 +489,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	eon, err := uc.keyperSetManagerContract.GetKeyperSetIndexByBlock(nil, blockNumber)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying keyper set index")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for keyper set index",
 			"",
@@ -466,7 +501,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	eonKeyBytes, err := uc.keyBroadcastContract.GetEonKey(nil, eon)
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying for eon key")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error encountered while querying for eon key",
 			"",
@@ -496,7 +531,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	registrationData, err := uc.shutterRegistryContract.Registrations(nil, [32]byte(identity))
 	if err != nil {
 		log.Err(err).Msg("err encountered while querying contract")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"error while querying for registrations from the contract",
 			"",
@@ -522,10 +557,16 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 		Signer: newSigner.Signer,
 	}
 
-	tx, err := uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
+	tx, httpErr, err := uc.submitTransaction(ctx, func(submitCtx context.Context) (*types.Transaction, error) {
+		opts.Context = submitCtx
+		return uc.shutterRegistryContract.Register(&opts, eon, identityPrefix, decryptionTimestamp)
+	})
+	if httpErr != nil {
+		return nil, httpErr
+	}
 	if err != nil {
 		log.Err(err).Msg("failed to send transaction")
-		metrics.TotalFailedRPCCalls.Inc()
+		metrics.FailedRPCCalls.Inc()
 		err := httpError.NewHttpError(
 			"failed to register identity",
 			"",
@@ -537,7 +578,7 @@ func (uc *CryptoUsecase) RegisterIdentity(ctx context.Context, decryptionTimesta
 	// we return the transaction hash in response to allow
 	// users the ability to monitor it themselves
 
-	metrics.TotalSuccessfulIdentityRegistration.Inc()
+	metrics.IdentityRegistrationsSubmitted.Inc()
 	return &RegisterIdentityResponse{
 		Eon:            eon,
 		Identity:       common.PrefixWith0x(hex.EncodeToString(identity)),

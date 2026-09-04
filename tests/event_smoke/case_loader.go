@@ -16,6 +16,7 @@ type jsonCase struct {
 	EmitSig     string     `json:"emitSig"`
 	EmitArgs    []string   `json:"emitArgs"`
 	Expected    string     `json:"expected"` // "pass" | "fail"
+	MultiReg    int        `json:"multiReg,omitempty"`
 }
 
 var varRe = regexp.MustCompile(`\$\{([A-Z0-9_]+)\}`)
@@ -41,6 +42,7 @@ func LoadCasesFromJSON(path string, vars map[string]string) ([]TestCase, error) 
 			EmitArg:     make([]string, 0, len(c.EmitArgs)),
 			Args:        make([]EventArg, 0, len(c.Args)),
 			ExpectKey:   !strings.EqualFold(strings.TrimSpace(c.Expected), "fail"),
+			MultiReg:    c.MultiReg,
 		}
 		for _, a := range c.EmitArgs {
 			tc.EmitArg = append(tc.EmitArg, expand(a, vars))

@@ -26,6 +26,10 @@ func runCase(cfg *Config, tc TestCase) Result {
 	meta.TriggerDef = td
 	logf(cfg, "[%s] trigger=%s", tc.Name, shortHex(td, 26))
 
+	if tc.MultiReg > 1 {
+		return runMultiReg(cfg, tc, td)
+	}
+
 	fmt.Printf("[%s] register\n", tc.Name)
 	identity, eon, regTx, prefix, err := registerIdentity(cfg, td)
 	if err != nil {
@@ -130,6 +134,146 @@ func runCase(cfg *Config, tc TestCase) Result {
 		Name:   tc.Name,
 		Status: "PASS",
 		Reason: fmt.Sprintf("timeout with no key (expected no key): identity=%s eon=%d", meta.Identity, meta.Eon),
+	}
+}
+
+func runMultiReg(cfg *Config, tc TestCase, triggerDef string) Result {
+	n := tc.MultiReg
+	type regEntry struct {
+		identity string
+		eon      int64
+		txHash   string
+	}
+	regs := make([]regEntry, 0, n)
+
+	for i := 0; i < n; i++ {
+		fmt.Printf("[%s] register %d/%d\n", tc.Name, i+1, n)
+		identity, eon, regTx, prefix, err := registerIdentity(cfg, triggerDef)
+		if err != nil {
+			return Result{tc.Name, "FAIL", fmt.Sprintf("register %d: %s", i+1, err.Error())}
+		}
+		logf(cfg, "[%s] reg[%d] identity=%s eon=%d prefix=%s", tc.Name, i+1, identity, eon, prefix)
+		regs = append(regs, regEntry{identity, eon, regTx})
+	}
+
+	if cfg.WaitRegReceipt {
+		fmt.Printf("[%s] waiting for %d registration receipts (parallel)\n", tc.Name, n)
+		type receiptResult struct {
+			block int64
+			err   error
+		}
+		ch := make(chan receiptResult, n)
+		for _, reg := range regs {
+			reg := reg
+			go func() {
+				block, err := waitReceiptBlock(cfg, reg.txHash)
+				ch <- receiptResult{block, err}
+			}()
+		}
+		maxBlock := int64(0)
+		for range regs {
+			r := <-ch
+			if r.err != nil {
+				return Result{tc.Name, "FAIL", "registration receipt: " + r.err.Error()}
+			}
+			if r.block > maxBlock {
+				maxBlock = r.block
+			}
+		}
+		_ = waitBlockGreater(cfg, maxBlock)
+	} else {
+		fmt.Printf("[%s] all %d registration txs sent (sleep %s)\n", tc.Name, n, cfg.RegistrationDelay)
+		time.Sleep(cfg.RegistrationDelay)
+	}
+
+	fmt.Printf("[%s] emit\n", tc.Name)
+	evTx, err := emitEvent(cfg, tc.EmitSig, tc.EmitArg)
+	if err != nil {
+		return Result{tc.Name, "FAIL", "emit: " + err.Error()}
+	}
+	logf(cfg, "[%s] emitTx=%s sig=%s args=%v", tc.Name, evTx, tc.EmitSig, tc.EmitArg)
+
+	evBlock, err := waitReceiptBlock(cfg, evTx)
+	if err != nil {
+		return Result{tc.Name, "FAIL", "event receipt: " + err.Error()}
+	}
+	logf(cfg, "[%s] eventBlock=%d", tc.Name, evBlock)
+
+	fmt.Printf("[%s] poll %d keys\n", tc.Name, n)
+	deadline := time.Now().Add(time.Duration(cfg.PollSeconds) * time.Second)
+	keys := make(map[string]string, n) // identity -> key
+	timeouts := make(map[string]int, n)
+
+	for time.Now().Before(deadline) && len(keys) < n {
+		for _, reg := range regs {
+			if _, found := keys[reg.identity]; found {
+				continue
+			}
+			key, msg, ok := getDecryptionKey(cfg, reg.identity, reg.eon)
+			if ok {
+				keys[reg.identity] = key
+				logf(cfg, "[%s] got key for identity=%s key=%s", tc.Name, shortHex(reg.identity, 10), shortHex(key, 18))
+				continue
+			}
+			logf(cfg, "[%s] pending identity=%s msg=%s", tc.Name, shortHex(reg.identity, 10), msg)
+
+			if strings.Contains(strings.ToLower(msg), "timeout") {
+				timeouts[reg.identity]++
+				if timeouts[reg.identity] >= cfg.MaxConsecTimeouts {
+					return Result{
+						Name:   tc.Name,
+						Status: "FAIL",
+						Reason: fmt.Sprintf("aborted after %d timeouts for identity %s: %s", timeouts[reg.identity], reg.identity, msg),
+					}
+				}
+			} else {
+				timeouts[reg.identity] = 0
+			}
+
+			if !isTransient(msg) && !isTerminalNotFound(msg) {
+				return Result{
+					Name:   tc.Name,
+					Status: "FAIL",
+					Reason: fmt.Sprintf("non-transient error for identity %s: %s", reg.identity, msg),
+				}
+			}
+		}
+		if len(keys) < n {
+			time.Sleep(time.Duration(cfg.PollInterval) * time.Second)
+		}
+	}
+
+	if len(keys) < n {
+		missing := make([]string, 0, n-len(keys))
+		for _, reg := range regs {
+			if _, found := keys[reg.identity]; !found {
+				missing = append(missing, shortHex(reg.identity, 10))
+			}
+		}
+		return Result{
+			Name:   tc.Name,
+			Status: "FAIL",
+			Reason: fmt.Sprintf("timeout: only %d/%d keys received, missing identities: %v", len(keys), n, missing),
+		}
+	}
+
+	// assert all keys are distinct
+	seen := make(map[string]string, n) // key -> identity
+	for identity, key := range keys {
+		if prev, dup := seen[key]; dup {
+			return Result{
+				Name:   tc.Name,
+				Status: "FAIL",
+				Reason: fmt.Sprintf("duplicate key %s for identities %s and %s", shortHex(key, 18), shortHex(prev, 10), shortHex(identity, 10)),
+			}
+		}
+		seen[key] = identity
+	}
+
+	return Result{
+		Name:   tc.Name,
+		Status: "PASS",
+		Reason: fmt.Sprintf("received %d distinct decryption keys for %d registrations", n, n),
 	}
 }
 

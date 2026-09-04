@@ -33,6 +33,7 @@ type TestCase struct {
 	EmitSig     string
 	EmitArg     []string
 	ExpectKey   bool
+	MultiReg    int // >1: register this many identities, emit once, assert all get distinct keys
 }
 
 type Result struct {

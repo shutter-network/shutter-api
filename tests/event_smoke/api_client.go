@@ -109,12 +109,18 @@ func getDecryptionKey(cfg *Config, identity string, eon int64) (key, msg string,
 	var m map[string]any
 	_ = json.Unmarshal(body, &m)
 
-	if v := str(m["decryption_key"]); strings.HasPrefix(v, "0x") && len(v) > 2 {
-		return v, "", true
+	if v := str(m["decryption_key"]); v != "" {
+		if strings.HasPrefix(v, "0x") && len(v) > 2 {
+			return v, "", true
+		}
+		return "", fmt.Sprintf("decryption_key present but unexpected format: %q", v), false
 	}
 	if msgObj, ok := m["message"].(map[string]any); ok {
-		if v := str(msgObj["decryption_key"]); strings.HasPrefix(v, "0x") && len(v) > 2 {
-			return v, "", true
+		if v := str(msgObj["decryption_key"]); v != "" {
+			if strings.HasPrefix(v, "0x") && len(v) > 2 {
+				return v, "", true
+			}
+			return "", fmt.Sprintf("decryption_key present but unexpected format: %q", v), false
 		}
 	}
 

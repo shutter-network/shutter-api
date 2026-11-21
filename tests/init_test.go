@@ -50,9 +50,9 @@ func (s *TestShutterService) SetupSuite() {
 		return
 	}
 	s.config = &common.Config{
-		KeyperHTTPURL: parsedURL,
-		SigningKey:    privateKey,
-		PublicKey:     publicKey,
+		KeyperHTTPURLs: []*url.URL{parsedURL},
+		SigningKey:     privateKey,
+		PublicKey:      publicKey,
 	}
 	s.shutterRegistryContract = new(mock.MockShutterregistry)
 	s.shutterEventRegistryContract = new(mock.MockShutterEventRegistry)

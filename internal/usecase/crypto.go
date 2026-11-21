@@ -34,6 +34,8 @@ import (
 const (
 	IdentityPrefixByteLength            = 32
 	defaultTransactionSubmissionTimeout = 5 * time.Second
+	defaultKeyperRequestTimeout         = 5 * time.Second
+	defaultKeyperFailoverTimeout        = 2 * time.Second
 )
 
 type ShutterregistryInterface interface {
@@ -100,6 +102,14 @@ type CryptoUsecase struct {
 	// producing transactions that use the same nonce.
 	sendSem                      *semaphore.Weighted
 	transactionSubmissionTimeout time.Duration
+	// keyperRequestTimeout bounds the request to the last, or only, fallback
+	// keyper, so a keyper that accepts the connection but never answers holds
+	// that request for no longer than this.
+	keyperRequestTimeout time.Duration
+	// keyperFailoverTimeout bounds the request to each fallback keyper that
+	// has another one after it. It is shorter, so that a stalled keyper costs
+	// little before the next one is asked.
+	keyperFailoverTimeout time.Duration
 }
 
 func NewCryptoUsecase(
@@ -122,6 +132,8 @@ func NewCryptoUsecase(
 		config:                       config,
 		sendSem:                      semaphore.NewWeighted(1),
 		transactionSubmissionTimeout: defaultTransactionSubmissionTimeout,
+		keyperRequestTimeout:         defaultKeyperRequestTimeout,
+		keyperFailoverTimeout:        defaultKeyperFailoverTimeout,
 	}
 }
 
@@ -666,11 +678,53 @@ func (uc *CryptoUsecase) DecryptCommitment(ctx context.Context, encryptedCommitm
 	return common.PrefixWith0x(hex.EncodeToString(decryptedMsg)), nil
 }
 
+// getDecryptionKeyFromExternalKeyper asks the configured keypers in order and
+// returns the first decryption key it gets. A keyper that cannot be reached,
+// times out or answers without a key is skipped, until the caller's context
+// is done. If no keyper sends a key, it returns an empty key when a request to
+// a keyper succeeded, so the caller reports the key as not found as it does
+// for a single keyper. When no request succeeded, it returns the first
+// keyper's error. Each keyper but the last is given keyperFailoverTimeout to
+// answer, and the last, or only, one keyperRequestTimeout.
 func (uc *CryptoUsecase) getDecryptionKeyFromExternalKeyper(ctx context.Context, eon int64, identity string) (string, error) {
-
-	path := uc.config.KeyperHTTPURL.JoinPath("/decryptionKey/", fmt.Sprint(eon), "/", identity)
-	return QueryExternalKeyper(ctx, eon, identity, path)
+	var firstErr error
+	answered := false
+	for i, keyperURL := range uc.config.KeyperHTTPURLs {
+		timeout := uc.keyperFailoverTimeout
+		if i == len(uc.config.KeyperHTTPURLs)-1 {
+			timeout = uc.keyperRequestTimeout
+		}
+		path := keyperURL.JoinPath("/decryptionKey/", fmt.Sprint(eon), "/", identity)
+		decryptionKey, err := uc.queryExternalKeyperWithTimeout(ctx, eon, identity, path, timeout)
+		if err != nil {
+			log.Warn().Err(err).Int("keyperIndex", i).Msg("failed to get decryption key from fallback keyper")
+			if firstErr == nil {
+				firstErr = err
+			}
+			// Once the caller has gone or run out of time, every later
+			// request would fail at once, so stop instead of asking the rest.
+			if ctx.Err() != nil {
+				break
+			}
+			continue
+		}
+		if decryptionKey != "" {
+			return decryptionKey, nil
+		}
+		answered = true
+	}
+	if answered {
+		return "", nil
+	}
+	return "", firstErr
 }
+
+func (uc *CryptoUsecase) queryExternalKeyperWithTimeout(ctx context.Context, eon int64, identity string, path *url.URL, timeout time.Duration) (string, error) {
+	queryCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return QueryExternalKeyper(queryCtx, eon, identity, path)
+}
+
 func QueryExternalKeyper(ctx context.Context, eon int64, identity string, path *url.URL) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", path.String(), http.NoBody)
